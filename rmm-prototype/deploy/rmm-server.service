@@ -1,0 +1,30 @@
+# Non-Docker deployment option. Copy to /etc/systemd/system/rmm-server.service,
+# edit the paths/user below, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now rmm-server
+#   sudo journalctl -u rmm-server -f      # view logs
+
+[Unit]
+Description=RMM Server
+After=network.target
+
+[Service]
+Type=simple
+User=rmm
+WorkingDirectory=/opt/rmm-prototype/server
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=3
+
+# Secrets go here, not in the repo. Create /etc/rmm-server.env with:
+#   SESSION_SECRET=...
+#   PORT=8787
+EnvironmentFile=/etc/rmm-server.env
+
+# Basic sandboxing - server only needs to read/write its own directory.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/rmm-prototype/server
+
+[Install]
+WantedBy=multi-user.target

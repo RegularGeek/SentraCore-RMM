@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RMM · Live Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">RMM <span class="brand-sub">// live monitor</span></span>
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="alertsBtn" title="Alerts">
+          <span>alerts</span>
+          <span class="badge" id="alertsBadge" hidden>0</span>
+        </button>
+        <div class="conn" id="connStatus">
+          <span class="conn-dot" id="connDot"></span>
+          <span id="connLabel">connecting…</span>
+        </div>
+        <div class="session" id="sessionInfo"></div>
+        <button class="icon-btn" id="logoutBtn" title="Sign out">sign out</button>
+      </div>
+    </header>
+
+    <div class="body">
+      <aside class="sidebar">
+        <div class="sidebar-head">
+          <span>endpoints</span>
+          <span class="count" id="agentCount">0</span>
+        </div>
+        <div class="agent-list" id="agentList">
+          <div class="empty-hint">No agents connected yet.<br>Start one with <code>npm start</code> in <code>/agent</code>.</div>
+        </div>
+      </aside>
+
+      <main class="detail" id="detail">
+        <div class="empty-state">
+          <div class="empty-glyph">◌</div>
+          <p>Select an endpoint to view live metrics.</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Alerts drawer: active alerts + threshold rule management -->
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="drawer" id="alertsDrawer">
+    <div class="drawer-head">
+      <span>Alerts</span>
+      <button class="icon-btn" id="closeDrawerBtn">close</button>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">Active</div>
+      <div id="activeAlertsList" class="alert-list"><div class="empty-hint">No active alerts.</div></div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">Rules</div>
+      <div id="rulesList" class="rules-list"></div>
+      <form id="ruleForm" class="rule-form">
+        <select id="ruleMetric">
+          <option value="cpuLoad">CPU load %</option>
+          <option value="memUsedPct">Memory used %</option>
+          <option value="diskUsedPct">Disk used %</option>
+        </select>
+        <select id="ruleComparator">
+          <option value=">">&gt;</option>
+          <option value=">=">&ge;</option>
+          <option value="<">&lt;</option>
+          <option value="<=">&le;</option>
+        </select>
+        <input id="ruleThreshold" type="number" placeholder="threshold" required />
+        <input id="ruleWebhook" type="text" placeholder="webhook URL (optional)" />
+        <button type="submit">Add rule</button>
+      </form>
+    </div>
+  </aside>
+
+  <script src="/app.js"></script>
+</body>
+</html>

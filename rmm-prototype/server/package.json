@@ -1,0 +1,21 @@
+{
+  "name": "rmm-server",
+  "version": "0.2.0",
+  "description": "RMM server - hub, dashboard, auth, alerting, remote script execution",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "ws": "^8.17.0",
+    "better-sqlite3": "^11.1.2",
+    "bcryptjs": "^2.4.3"
+  },
+  "optionalDependencies": {
+    "nodemailer": "^6.9.13"
+  }
+}

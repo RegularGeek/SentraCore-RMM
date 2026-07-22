@@ -1,0 +1,21 @@
+# Runs just the RMM server. Caddy (or your own reverse proxy) sits in front
+# of this and terminates TLS — see deploy/Caddyfile.
+#
+# Usage:
+#   cp deploy/.env.example .env   # then edit it
+#   docker compose up -d --build
+#   docker compose exec server npm run seed
+services:
+  server:
+    build: ./server
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PORT=8787
+    ports:
+      - "127.0.0.1:8787:8787"   # bound to localhost; Caddy proxies to it
+    volumes:
+      - rmm_data:/app/data
+
+volumes:
+  rmm_data:

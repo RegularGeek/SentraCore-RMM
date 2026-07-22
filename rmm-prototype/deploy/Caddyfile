@@ -1,0 +1,11 @@
+# Caddy automatically gets and renews a Let's Encrypt certificate for
+# this domain, and proxies both HTTP and the WebSocket upgrade requests
+# (Caddy handles the Upgrade header for you - no special config needed).
+#
+# Install: https://caddyserver.com/docs/install
+# Run:     sudo caddy run --config /etc/caddy/Caddyfile
+# (or drop this in /etc/caddy/Caddyfile and `sudo systemctl reload caddy`)
+
+rmm.yourdomain.com {
+    reverse_proxy 127.0.0.1:8787
+}

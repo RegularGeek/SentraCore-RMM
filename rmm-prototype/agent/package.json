@@ -1,0 +1,14 @@
+{
+  "name": "rmm-agent",
+  "version": "0.1.0",
+  "description": "RMM prototype - cross-platform monitoring agent",
+  "main": "agent.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node agent.js"
+  },
+  "dependencies": {
+    "systeminformation": "^5.22.11",
+    "ws": "^8.17.0"
+  }
+}
