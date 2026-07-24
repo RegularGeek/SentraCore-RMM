@@ -1,8 +1,8 @@
-# Runs just the RMM server. Caddy (or your own reverse proxy) sits in front
-# of this and terminates TLS — see deploy/Caddyfile.
+# Runs just the SentraCore RMM server. Caddy (or your own reverse proxy)
+# sits in front of this and terminates TLS — see deploy/Caddyfile.
 #
 # Usage:
-#   cp deploy/.env.example .env   # then edit it
+#   cp deploy/.env.example .env   # then edit it (SESSION_SECRET, SEED_ADMIN_*)
 #   docker compose up -d --build
 #   docker compose exec server npm run seed
 services:

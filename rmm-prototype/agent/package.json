@@ -1,7 +1,7 @@
 {
-  "name": "rmm-agent",
+  "name": "sentracore-rmm-agent",
   "version": "0.1.0",
-  "description": "RMM prototype - cross-platform monitoring agent",
+  "description": "SentraCore RMM - cross-platform monitoring agent",
   "main": "agent.js",
   "type": "commonjs",
   "scripts": {

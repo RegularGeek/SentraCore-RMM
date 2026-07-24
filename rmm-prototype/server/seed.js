@@ -1,9 +1,9 @@
-// Run once (`npm run seed`) to bootstrap a default org + admin login.
+// Run once (`npm run seed`) to bootstrap a default org + superadmin login.
 // Safe to re-run: it skips creation if the org/user already exist.
 
 const crypto = require("crypto");
-const { db, uid, now, getOrgByToken, getUserByUsername } = require("./db");
-const { hashPassword } = require("./auth");
+const { db, uid, now, getUserByUsername } = require("./database/db");
+const { hashPassword } = require("./auth/password");
 
 async function main() {
   const existingOrg = db.prepare("SELECT * FROM orgs WHERE name = ?").get("Default Org");
@@ -23,16 +23,26 @@ async function main() {
   }
 
   const username = process.env.SEED_ADMIN_USER || "admin";
-  const password = process.env.SEED_ADMIN_PASS || "changeme123";
+  const email = process.env.SEED_ADMIN_EMAIL || `${username}@local`;
+  const password = process.env.SEED_ADMIN_PASS;
+
+  if (!password && !getUserByUsername(username)) {
+    console.error(
+      "\nSEED_ADMIN_PASS is not set. Refusing to seed a default/guessable password.\n" +
+      "Run again with, e.g.:\n" +
+      "  SEED_ADMIN_PASS='a strong password' npm run seed\n"
+    );
+    process.exit(1);
+  }
 
   const existingUser = getUserByUsername(username);
   if (!existingUser) {
     const hash = await hashPassword(password);
     db.prepare(`
-      INSERT INTO users (id, org_id, username, password_hash, role, created_at)
-      VALUES (@id, @org_id, @username, @password_hash, 'admin', @created_at)
-    `).run({ id: uid(), org_id: org.id, username, password_hash: hash, created_at: now() });
-    console.log("Created admin user:", username);
+      INSERT INTO users (id, org_id, email, username, password_hash, role, created_at, updated_at)
+      VALUES (@id, @org_id, @email, @username, @password_hash, 'superadmin', @created_at, @created_at)
+    `).run({ id: uid(), org_id: org.id, email, username, password_hash: hash, created_at: now() });
+    console.log("Created superadmin user:", username);
   } else {
     console.log("User already exists:", username);
   }
@@ -40,11 +50,12 @@ async function main() {
   console.log("\n──────────────────────────────────────────────");
   console.log(" Dashboard login:");
   console.log("   username:", username);
-  console.log("   password:", existingUser ? "(unchanged - already existed)" : password);
+  console.log("   password:", existingUser ? "(unchanged - already existed)" : "(the SEED_ADMIN_PASS value you set)");
+  console.log("   role:    ", existingUser ? existingUser.role : "superadmin");
   console.log("\n Agent token (set as AGENT_TOKEN when starting an agent):");
   console.log("  ", org.agent_token);
   console.log("──────────────────────────────────────────────\n");
-  console.log("Change the admin password after first login in a real deployment.");
+  console.log("Change the admin password after first login in a real deployment (no change-password UI yet, see README).");
 }
 
 main().then(() => process.exit(0));

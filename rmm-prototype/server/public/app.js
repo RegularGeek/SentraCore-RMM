@@ -1,7 +1,12 @@
-// RMM Dashboard client (v0.2)
+// SentraCore RMM Dashboard client
 // Adds on top of live monitoring: auth/session handling, tabs per agent
 // (Overview / History / Inventory / Scripts), an alerts drawer with
 // threshold-rule management, and a remote script console with audit trail.
+//
+// Auth-restructuring change: api() now echoes the CSRF cookie back as a
+// header on every request, since the server enforces the double-submit
+// CSRF check on all state-changing /api/* routes. No other behavior here
+// changed.
 
 const HISTORY_LEN = 60; // ~2 min of live history at 2s/sample
 
@@ -14,6 +19,7 @@ const state = {
   rules: [],
   scriptRuns: [], // for the currently selected agent
   scriptPending: false,
+  role: null,
 };
 
 const el = {
@@ -34,9 +40,17 @@ const el = {
   ruleForm: document.getElementById("ruleForm"),
 };
 
+function readCookie(name) {
+  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function api(path, opts = {}) {
   const res = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-csrf-token": readCookie("sentracore.csrf") || "",
+    },
     credentials: "same-origin",
     ...opts,
   });
@@ -55,7 +69,8 @@ async function api(path, opts = {}) {
 async function boot() {
   try {
     const session = await api("/api/session");
-    el.sessionInfo.textContent = `${session.username} · ${session.orgName}`;
+    el.sessionInfo.textContent = `${session.username} · ${session.orgName} · ${session.role}`;
+    state.role = session.role;
   } catch {
     return; // api() already redirected to /login.html
   }
@@ -498,36 +513,44 @@ function renderScriptRunsList() {
 }
 
 function renderScriptsTab(body, agentId) {
+  const canRun = state.role && ["technician", "admin", "superadmin"].includes(state.role);
   body.innerHTML = `
     <div class="warning-banner">Scripts run with full privileges of the agent process on the target machine. Only run commands you trust — every run is logged below for audit.</div>
-    <form id="scriptForm" class="script-form">
-      <textarea id="scriptInput" rows="4" placeholder="e.g. echo hello, systemctl status nginx, Get-Service ..."></textarea>
-      <button type="submit" id="scriptRunBtn">Run on this endpoint</button>
-    </form>
+    ${canRun ? `
+      <form id="scriptForm" class="script-form">
+        <textarea id="scriptInput" rows="4" placeholder="e.g. echo hello, systemctl status nginx, Get-Service ..."></textarea>
+        <button type="submit" id="scriptRunBtn">Run on this endpoint</button>
+      </form>
+    ` : `
+      <div class="empty-hint">Your role (${escapeHtml(state.role || "unknown")}) doesn't permit running scripts. Ask an admin to grant the technician role or above.</div>
+    `}
     <div id="scriptRunsList" class="script-runs-list"><div class="empty-hint">Loading history…</div></div>
   `;
 
-  document.getElementById("scriptForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const input = document.getElementById("scriptInput");
-    const script = input.value.trim();
-    if (!script || state.scriptPending) return;
-    const btn = document.getElementById("scriptRunBtn");
-    btn.disabled = true;
-    btn.textContent = "Running…";
-    state.scriptPending = true;
-    try {
-      await api(`/api/agents/${agentId}/run`, { method: "POST", body: JSON.stringify({ script }) });
-      input.value = "";
-      await loadScriptRuns(agentId);
-    } catch (err) {
-      alert(err.message);
-      state.scriptPending = false;
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Run on this endpoint";
-    }
-  });
+  const form = document.getElementById("scriptForm");
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("scriptInput");
+      const script = input.value.trim();
+      if (!script || state.scriptPending) return;
+      const btn = document.getElementById("scriptRunBtn");
+      btn.disabled = true;
+      btn.textContent = "Running…";
+      state.scriptPending = true;
+      try {
+        await api(`/api/agents/${agentId}/run`, { method: "POST", body: JSON.stringify({ script }) });
+        input.value = "";
+        await loadScriptRuns(agentId);
+      } catch (err) {
+        alert(err.message);
+        state.scriptPending = false;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Run on this endpoint";
+      }
+    });
+  }
 
   loadScriptRuns(agentId);
 }

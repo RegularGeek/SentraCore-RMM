@@ -1,5 +1,5 @@
-# RMM server image. Only the server is containerized — agents run directly
-# on the machines you're monitoring, not in a container on this host.
+# SentraCore RMM server image. Only the server is containerized — agents
+# run directly on the machines you're monitoring, not in a container here.
 FROM node:20-bookworm-slim
 
 # better-sqlite3 needs a native build toolchain at install time.

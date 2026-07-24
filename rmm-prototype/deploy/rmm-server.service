@@ -5,7 +5,7 @@
 #   sudo journalctl -u rmm-server -f      # view logs
 
 [Unit]
-Description=RMM Server
+Description=SentraCore RMM Server
 After=network.target
 
 [Service]

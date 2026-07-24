@@ -9,6 +9,12 @@
   --cyan: #4FD1C5;
   --amber: #F0A857;
   --red: #E5675A;
+  /* SentraCore brand blue — used for the login screen and brand mark per
+     the "enterprise cybersecurity" brief. The live dashboard keeps its
+     existing cyan accent (--cyan) since it's load-bearing UI (status dots,
+     traces, active tab) and changing it wasn't asked for / isn't necessary. */
+  --brand-blue: #3B82F6;
+  --brand-blue-dim: #1E3A8A;
   --font-display: 'Space Grotesk', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
 }
@@ -43,6 +49,10 @@ html, body {
   border-radius: 2px;
   background: var(--cyan);
   box-shadow: 0 0 10px var(--cyan);
+}
+.brand-mark-blue {
+  background: var(--brand-blue);
+  box-shadow: 0 0 10px var(--brand-blue);
 }
 
 .brand-name {
@@ -247,15 +257,20 @@ canvas.trace { display: block; width: 100%; height: 56px; }
   display: flex;
   align-items: center;
   justify-content: center;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.10), transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.06), transparent 50%),
+    var(--bg);
 }
 .login-card {
-  width: 320px;
+  width: 340px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 28px 26px;
+  border-radius: 12px;
+  padding: 30px 28px;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.06), 0 20px 60px rgba(0, 0, 0, 0.35);
 }
 .login-label {
   font-size: 11px;
@@ -273,20 +288,20 @@ canvas.trace { display: block; width: 100%; height: 56px; }
   font-family: var(--font-mono);
   font-size: 13px;
 }
-.login-input:focus { outline: 1px solid var(--cyan); border-color: var(--cyan); }
+.login-input:focus { outline: 1px solid var(--brand-blue); border-color: var(--brand-blue); }
 .login-btn {
   margin-top: 20px;
   padding: 10px;
   border: none;
   border-radius: 6px;
-  background: var(--cyan);
-  color: #0B1015;
+  background: var(--brand-blue);
+  color: #F5F8FF;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
 }
-.login-btn:hover { filter: brightness(1.08); }
+.login-btn:hover { filter: brightness(1.1); }
 .login-error { color: var(--red); font-size: 12px; margin-top: 10px; min-height: 14px; }
 .login-hint { color: var(--text-faint); font-size: 11px; margin-top: 14px; line-height: 1.6; }
 .login-hint code { color: var(--text-dim); background: var(--surface-raised); padding: 1px 4px; border-radius: 3px; }
@@ -309,7 +324,7 @@ canvas.trace { display: block; width: 100%; height: 56px; }
   align-items: center;
   gap: 6px;
 }
-.icon-btn:hover { color: var(--text); border-color: var(--cyan); }
+.icon-btn:hover { color: var(--text); border-color: var(--brand-blue); }
 
 .badge {
   background: var(--red);
@@ -384,7 +399,7 @@ canvas.trace { display: block; width: 100%; height: 56px; }
   cursor: pointer;
   font-family: var(--font-mono);
 }
-.ack-btn:hover, .del-btn:hover { border-color: var(--cyan); color: var(--text); }
+.ack-btn:hover, .del-btn:hover { border-color: var(--brand-blue); color: var(--text); }
 
 .rule-form {
   margin-top: 12px;

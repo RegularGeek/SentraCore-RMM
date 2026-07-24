@@ -10,7 +10,7 @@ systemd path is more transparent if you want to see exactly what's running.
 ## 0. Before either path
 
 - **A VPS.** Any $5-6/mo box (DigitalOcean, Hetzner, Linode, etc.) is plenty
-  for a prototype's worth of agents. Ubuntu 22.04/24.04 assumed below.
+  for a beta's worth of agents. Ubuntu 22.04/24.04 assumed below.
 - **A domain (or subdomain)** pointed at the VPS's IP — an `A` record, e.g.
   `rmm.yourdomain.com → <VPS IP>`. Caddy needs this to issue a TLS cert.
 - **Firewall:** only ports `80` and `443` need to be open to the internet
@@ -34,7 +34,7 @@ cp deploy/.env.example .env
 nano .env                 # set SESSION_SECRET and SEED_ADMIN_PASS to real values
 
 docker compose up -d --build
-docker compose exec server npm run seed   # prints admin login + agent token
+docker compose exec server npm run seed   # prints superadmin login + agent token
 ```
 
 Then install Caddy and point it at the container:
@@ -61,11 +61,12 @@ sudo git clone <your repo> /opt/rmm-prototype     # or scp it up
 cd /opt/rmm-prototype/server
 sudo -u rmm npm install
 
-sudo -u rmm npm run seed                          # prints admin login + agent token
+sudo -u rmm bash -c "SEED_ADMIN_PASS='choose a real password' npm run seed"
 
 sudo tee /etc/rmm-server.env << EOF
 SESSION_SECRET=$(openssl rand -hex 32)
 PORT=8787
+NODE_ENV=production
 EOF
 
 sudo cp ../deploy/rmm-server.service /etc/systemd/system/
@@ -92,9 +93,9 @@ machine's side.
 
 ## After you're live
 
-- Delete/rotate the seeded admin password — `npm run seed` won't overwrite
-  an existing user, so change it via a script or the DB directly for now
-  (there's no "change password" UI yet).
+- There's still no "change password" UI — rotate a user's password by
+  re-running the relevant insert/update against the SQLite file directly,
+  or extend `services/authService.js` with a change-password endpoint.
 - Set up backups for the SQLite file: `/app/data/rmm.db` (Docker volume) or
   `/opt/rmm-prototype/server/rmm.db` (native). A daily `cp` to off-box
   storage is enough at this scale.

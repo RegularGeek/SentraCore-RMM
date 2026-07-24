@@ -1,7 +1,11 @@
-// RMM Prototype - Monitoring Agent
+// SentraCore RMM - Monitoring Agent
 // Runs on the target system (Windows / Linux / macOS), collects live
 // metrics with `systeminformation`, and streams them to the server
 // over a WebSocket. Reconnects automatically with backoff.
+//
+// Unchanged by the authentication milestone - the agent talks to the
+// server over /ws/agent using its org token, which is a separate trust
+// boundary from dashboard user logins.
 
 const WebSocket = require("ws");
 const si = require("systeminformation");

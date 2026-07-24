@@ -1,31 +1,46 @@
-// RMM Prototype - Central Server (v0.2)
-// Adds on top of the original live-monitoring hub:
-//   - session-based login, org-scoped multi-tenancy
-//   - SQLite persistence (metrics history, inventory, alerts, audit log)
-//   - threshold-based alerting with webhook/email notifications
-//   - remote script execution with an audit trail
-//
-// SECURITY NOTE: remote script execution runs arbitrary commands on target
-// machines. It is gated behind login + org scoping and every run is logged
-// to script_runs (who, what, when, output) - but there is no role/approval
-// step yet. Do not expose this server to untrusted users, and read the
-// README before pointing it at anything you don't own or administer.
+// SentraCore RMM - Central Server
+// Restructured from the original single-file server.js into
+// auth/ middleware/ database/ routes/ services/ models/ per the
+// feature/authentication milestone. No route paths, WS message shapes,
+// or DB schemas were broken - see README "Authentication" section for
+// what changed and why.
 
 const express = require("express");
 const http = require("http");
 const path = require("path");
+const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
 const { WebSocketServer } = require("ws");
 
-const db = require("./db");
-const { sessionParser, requireLogin, verifyPassword } = require("./auth");
-const { notifyAlert } = require("./notify");
+const db = require("./database/db");
+const { sessionParser } = require("./auth/session");
+const { requireLogin } = require("./middleware/requireAuth");
+const { issueCsrfCookie, verifyCsrfToken } = require("./middleware/csrf");
+const { notifyAlert } = require("./services/notify");
+
+const authRoutes = require("./routes/authRoutes");
+const createAgentRoutes = require("./routes/agentRoutes");
+const alertRoutes = require("./routes/alertRoutes");
+const { createScriptRoutes } = require("./routes/scriptRoutes");
 
 const PORT = process.env.PORT || 8787;
-const SCRIPT_TIMEOUT_MS = Number(process.env.SCRIPT_TIMEOUT_MS || 30000);
 
 const app = express();
+app.set("trust proxy", 1); // needed for req.ip to be correct behind Caddy - see DEPLOYMENT.md
+
+app.use(
+  helmet({
+    // Keep CSP disabled for now - the dashboard loads Google Fonts and
+    // inline event handlers are not used, but a strict CSP needs its own
+    // pass with the actual asset list to avoid breaking the UI silently.
+    // Tracked as follow-up work, not shipped half-configured.
+    contentSecurityPolicy: false,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 app.use(sessionParser);
+app.use(issueCsrfCookie);
 app.use(express.static(path.join(__dirname, "public"), { index: false }));
 
 const server = http.createServer(app);
@@ -44,118 +59,24 @@ function broadcastToOrg(orgId, msg) {
 }
 
 // =====================================================================
-// Auth routes
+// Routes
 // =====================================================================
-app.post("/api/login", async (req, res) => {
-  const { username, password } = req.body || {};
-  const user = db.getUserByUsername(username || "");
-  if (!user || !(await verifyPassword(password || "", user.password_hash))) {
-    return res.status(401).json({ error: "invalid credentials" });
-  }
-  req.session.userId = user.id;
-  req.session.orgId = user.org_id;
-  req.session.username = user.username;
-  res.json({ ok: true });
-});
-
-app.post("/api/logout", (req, res) => {
-  req.session.destroy(() => res.json({ ok: true }));
-});
-
-app.get("/api/session", requireLogin, (req, res) => {
-  const org = db.getOrgById(req.session.orgId);
-  res.json({ username: req.session.username, orgName: org ? org.name : "unknown" });
-});
+// Auth routes are exempt from the CSRF check (there's no session yet to
+// tie a token to at login time) but everything past this point that
+// mutates state requires both a session (requireLogin) and a matching
+// CSRF token (verifyCsrfToken).
+app.use("/api", authRoutes);
 
 app.get("/", requireLogin, (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-// Everything else under /api requires a session.
-app.use("/api", requireLogin);
+app.use("/api", requireLogin, verifyCsrfToken);
+app.use("/api", createAgentRoutes({ liveAgents }));
+app.use("/api", alertRoutes);
+app.use("/api", createScriptRoutes({ liveAgents }));
 
 // =====================================================================
-// Agents
+// Alert evaluation (unchanged behavior, just relocated)
 // =====================================================================
-app.get("/api/agents", (req, res) => {
-  const agents = db.getAgentsByOrg(req.session.orgId).map((a) => ({
-    ...a,
-    lastMetrics: liveAgents.get(a.id)?.lastMetrics || null,
-  }));
-  res.json(agents);
-});
-
-app.get("/api/agents/:id/history", (req, res) => {
-  const agent = db.getAgent(req.params.id);
-  if (!agent || agent.org_id !== req.session.orgId) return res.status(404).json({ error: "not found" });
-
-  const ranges = { "1h": 3600e3, "24h": 86400e3, "7d": 7 * 86400e3 };
-  const span = ranges[req.query.range] || ranges["1h"];
-  const rows = db.getHistory(agent.id, Date.now() - span);
-
-  // Downsample to ~150 points so the payload/render stays cheap for long ranges.
-  const bucketCount = 150;
-  const bucketSize = Math.max(1, Math.ceil(rows.length / bucketCount));
-  const out = [];
-  for (let i = 0; i < rows.length; i += bucketSize) {
-    const chunk = rows.slice(i, i + bucketSize);
-    const avg = (key) => chunk.reduce((s, r) => s + (r[key] || 0), 0) / chunk.length;
-    out.push({
-      ts: chunk[chunk.length - 1].ts,
-      cpuLoad: Number(avg("cpu_load").toFixed(1)),
-      memUsedPct: Number(avg("mem_used_pct").toFixed(1)),
-      diskUsedPct: Number(avg("disk_used_pct").toFixed(1)),
-      netRxKBs: Number(avg("net_rx").toFixed(1)),
-      netTxKBs: Number(avg("net_tx").toFixed(1)),
-    });
-  }
-  res.json(out);
-});
-
-app.get("/api/agents/:id/inventory", (req, res) => {
-  const agent = db.getAgent(req.params.id);
-  if (!agent || agent.org_id !== req.session.orgId) return res.status(404).json({ error: "not found" });
-  const inv = db.getInventory(agent.id);
-  if (!inv) return res.json(null);
-  res.json({
-    collectedAt: inv.collected_at,
-    hardware: JSON.parse(inv.hardware_json || "{}"),
-    software: JSON.parse(inv.software_json || "[]"),
-  });
-});
-
-// =====================================================================
-// Alert rules + events
-// =====================================================================
-app.get("/api/alert-rules", (req, res) => res.json(db.getRulesByOrg(req.session.orgId)));
-
-app.post("/api/alert-rules", (req, res) => {
-  const { metric, comparator, threshold, webhookUrl } = req.body || {};
-  if (!["cpuLoad", "memUsedPct", "diskUsedPct"].includes(metric)) return res.status(400).json({ error: "invalid metric" });
-  if (![">", ">=", "<", "<="].includes(comparator)) return res.status(400).json({ error: "invalid comparator" });
-  const rule = {
-    id: db.uid(),
-    org_id: req.session.orgId,
-    metric,
-    comparator,
-    threshold: Number(threshold),
-    webhook_url: webhookUrl || null,
-    created_at: db.now(),
-  };
-  db.createRule(rule);
-  res.json(rule);
-});
-
-app.delete("/api/alert-rules/:id", (req, res) => {
-  db.deleteRule(req.params.id, req.session.orgId);
-  res.json({ ok: true });
-});
-
-app.get("/api/alerts", (req, res) => res.json(db.getEventsByOrg(req.session.orgId)));
-
-app.post("/api/alerts/:id/ack", (req, res) => {
-  db.acknowledgeEvent(req.params.id, req.session.orgId);
-  res.json({ ok: true });
-});
-
 function evaluateAlerts(orgId, agentId, hostname, data) {
   const rules = db.getRulesByOrg(orgId).filter((r) => r.enabled);
   for (const rule of rules) {
@@ -182,37 +103,6 @@ function evaluateAlerts(orgId, agentId, hostname, data) {
     }
   }
 }
-
-// =====================================================================
-// Remote script execution
-// =====================================================================
-app.post("/api/agents/:id/run", (req, res) => {
-  const agent = db.getAgent(req.params.id);
-  if (!agent || agent.org_id !== req.session.orgId) return res.status(404).json({ error: "not found" });
-  const script = (req.body && req.body.script || "").trim();
-  if (!script) return res.status(400).json({ error: "script is required" });
-
-  const run = {
-    id: db.uid(), org_id: agent.org_id, agent_id: agent.id,
-    user_id: req.session.userId, script, requested_at: db.now(),
-  };
-  db.createScriptRun(run);
-
-  const live = liveAgents.get(agent.id);
-  if (!live || live.ws.readyState !== live.ws.OPEN) {
-    db.completeScriptRun(run.id, { exit_code: null, stdout: "", stderr: "agent is offline", status: "failed" });
-    return res.status(409).json({ error: "agent is offline", runId: run.id });
-  }
-
-  live.ws.send(JSON.stringify({ type: "run_script", runId: run.id, script, timeoutMs: SCRIPT_TIMEOUT_MS }));
-  res.status(202).json({ runId: run.id, status: "pending" });
-});
-
-app.get("/api/agents/:id/script-runs", (req, res) => {
-  const agent = db.getAgent(req.params.id);
-  if (!agent || agent.org_id !== req.session.orgId) return res.status(404).json({ error: "not found" });
-  res.json(db.getScriptRunsByAgent(agent.id));
-});
 
 // =====================================================================
 // WebSocket upgrade routing (session auth for dashboards, token auth for agents)
@@ -337,7 +227,7 @@ setInterval(() => {
 setInterval(() => db.pruneHistory(Date.now() - 30 * 86400e3), 6 * 3600e3);
 
 server.listen(PORT, () => {
-  console.log(`RMM server listening on http://localhost:${PORT}`);
+  console.log(`SentraCore RMM server listening on http://localhost:${PORT}`);
   console.log(`  Dashboard:    http://localhost:${PORT}  (login required)`);
   console.log(`  Agent WS:     ws://localhost:${PORT}/ws/agent`);
   console.log(`  Dashboard WS: ws://localhost:${PORT}/ws/dashboard`);

@@ -1,7 +1,7 @@
 {
-  "name": "rmm-server",
-  "version": "0.2.0",
-  "description": "RMM server - hub, dashboard, auth, alerting, remote script execution",
+  "name": "sentracore-rmm-server",
+  "version": "0.3.0",
+  "description": "SentraCore RMM server - hub, dashboard, auth, alerting, remote script execution",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
@@ -11,6 +11,9 @@
   "dependencies": {
     "express": "^4.19.2",
     "express-session": "^1.18.0",
+    "express-rate-limit": "^7.4.0",
+    "cookie-parser": "^1.4.6",
+    "helmet": "^7.1.0",
     "ws": "^8.17.0",
     "better-sqlite3": "^11.1.2",
     "bcryptjs": "^2.4.3"
