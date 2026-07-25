@@ -1,0 +1,21 @@
+node_modules/
+
+# SQLite database + WAL sidecars (created at runtime by the server)
+*.db
+*.db-wal
+*.db-shm
+
+# Agent identity file (per-machine, generated on first run)
+.agent-id
+
+# Secrets
+.env
+*.env
+!*.env.example
+
+# Tailwind build output
+rmm-prototype/server/public/ui/styles/tailwind.build.css
+
+# Editor/OS noise
+.DS_Store
+*.log

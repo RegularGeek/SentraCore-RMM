@@ -1,30 +1,37 @@
 const session = require("express-session");
+const { SqliteSessionStore } = require("./sessionStore");
 
-const SESSION_SECRET = process.env.SESSION_SECRET || "dev-secret-change-me";
+const DEV_SECRET = "dev-secret-change-me";
+const SESSION_SECRET = process.env.SESSION_SECRET || DEV_SECRET;
+const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS) || 1000 * 60 * 60 * 12; // 12h
 
-if (process.env.NODE_ENV === "production" && SESSION_SECRET === "dev-secret-change-me") {
-  console.warn(
-    "[auth] WARNING: SESSION_SECRET is unset in production. Set it in your .env / systemd EnvironmentFile."
+// A guessable signing key in production means forgeable session cookies, so
+// this is a hard failure rather than a warning.
+if (process.env.NODE_ENV === "production" && SESSION_SECRET === DEV_SECRET) {
+  console.error(
+    "[auth] SESSION_SECRET must be set in production. Add it to your .env / systemd EnvironmentFile."
   );
+  process.exit(1);
 }
 
-// NOTE: MemoryStore (the express-session default) is fine for a single-process
-// prototype but loses sessions on restart and won't work across multiple
-// server instances. Swap in a real store (Redis, connect-sqlite3, etc.)
-// before running this anywhere beyond your own machine — this is still
-// true after this refactor and is tracked in the README's "before real
-// machines" section.
+// Sessions are persisted in SQLite (see sessionStore.js) so a restart or a
+// second server process doesn't sign everyone out — this replaces the
+// express-session default MemoryStore the earlier betas shipped with.
+const store = new SqliteSessionStore({ ttlMs: SESSION_TTL_MS });
+
 const sessionParser = session({
   name: "sentracore.sid",
   secret: SESSION_SECRET,
+  store,
   resave: false,
   saveUninitialized: false,
+  rolling: true, // sliding expiry: an active user isn't logged out mid-shift
   cookie: {
-    maxAge: 1000 * 60 * 60 * 12, // 12h
+    maxAge: SESSION_TTL_MS,
     httpOnly: true,
     sameSite: "lax", // "lax" (not "strict") so the login redirect flow still works cleanly
     secure: process.env.NODE_ENV === "production", // requires HTTPS in prod — see DEPLOYMENT.md
   },
 });
 
-module.exports = { sessionParser, SESSION_SECRET };
+module.exports = { sessionParser, sessionStore: store, SESSION_SECRET, SESSION_TTL_MS };

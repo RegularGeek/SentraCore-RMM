@@ -1,6 +1,6 @@
 {
   "name": "sentracore-rmm-agent",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "SentraCore RMM - cross-platform monitoring agent",
   "main": "agent.js",
   "type": "commonjs",

@@ -9,12 +9,12 @@
 <!-- SentraCore Design System v1.0 -->
 <link rel="stylesheet" href="/ui/styles/index.css" />
 <link rel="stylesheet" href="/styles.css" />
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="https://unpkg.com/lucide@1.22.0/dist/umd/lucide.js" defer></script>
 <script src="/ui/icons/icons.js" defer></script>
 </head>
 <body class="sc-layout-auth">
-  <form class="sc-card" id="loginForm" style="width: 340px; display:flex; flex-direction:column; gap: var(--sc-space-4);">
-    <div class="brand" style="margin-bottom: var(--sc-space-2); display:flex; align-items:center; gap: var(--sc-space-2);">
+  <form class="sc-card login-card" id="loginForm">
+    <div class="brand login-brand">
       <span class="brand-mark brand-mark-blue" aria-hidden="true"></span>
       <span class="brand-name sc-text-h4">SentraCore <span class="sc-text-secondary sc-text-body">RMM // Beta</span></span>
     </div>
@@ -31,10 +31,10 @@
       </div>
     </div>
 
-    <button class="sc-btn sc-btn--primary sc-btn--lg" type="submit" style="margin-top: var(--sc-space-2);">Sign in</button>
+    <button class="sc-btn sc-btn--primary sc-btn--lg login-submit" type="submit">Sign in</button>
 
     <div class="sc-field-error" id="loginError" role="alert" aria-live="polite"></div>
-    <div class="sc-text-caption sc-text-muted" style="text-transform:none; letter-spacing:normal; line-height:1.6;">
+    <div class="sc-text-caption sc-text-muted login-hint">
       First time? Run <code>SEED_ADMIN_PASS='...' npm run seed</code> in <code>/server</code> for a login and agent token.
     </div>
   </form>

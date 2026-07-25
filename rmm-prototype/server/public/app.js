@@ -20,7 +20,12 @@ const state = {
   scriptRuns: [], // for the currently selected agent
   scriptPending: false,
   role: null,
+  userId: null,
+  users: [],
 };
+
+const ROLES = ["readonly", "technician", "admin", "superadmin"];
+const atLeast = (role, minRole) => ROLES.indexOf(role) >= ROLES.indexOf(minRole);
 
 const el = {
   connDot: document.getElementById("connDot"),
@@ -40,6 +45,15 @@ const el = {
   activeAlertsList: document.getElementById("activeAlertsList"),
   rulesList: document.getElementById("rulesList"),
   ruleForm: document.getElementById("ruleForm"),
+  accountBtn: document.getElementById("accountBtn"),
+  accountDrawer: document.getElementById("accountDrawer"),
+  closeAccountBtn: document.getElementById("closeAccountBtn"),
+  passwordForm: document.getElementById("passwordForm"),
+  passwordMessage: document.getElementById("passwordMessage"),
+  usersSection: document.getElementById("usersSection"),
+  usersList: document.getElementById("usersList"),
+  userForm: document.getElementById("userForm"),
+  userMessage: document.getElementById("userMessage"),
 };
 
 function readCookie(name) {
@@ -73,10 +87,16 @@ async function boot() {
     const session = await api("/api/session");
     el.sessionInfo.textContent = `${session.username} · ${session.orgName} · ${session.role}`;
     state.role = session.role;
+    state.userId = session.userId;
   } catch {
     return; // api() already redirected to /login.html
   }
   await Promise.all([loadAlerts(), loadRules()]);
+  el.usersSection.classList.toggle("is-hidden", !atLeast(state.role, "admin"));
+  if (atLeast(state.role, "admin")) {
+    await loadUsers();
+    renderUsers();
+  }
   if (window.SC && SC.useSidebarToggle) {
     SC.useSidebarToggle({ sidebar: el.sidebarEl, toggleBtn: el.sidebarToggleBtn });
   }
@@ -201,6 +221,7 @@ function renderAlertsBadge() {
 }
 
 function openDrawer() {
+  el.accountDrawer.classList.remove("open");
   el.drawer.classList.add("open");
   el.drawerBackdrop.classList.add("open");
   renderDrawer();
@@ -211,7 +232,10 @@ function closeDrawer() {
 }
 el.alertsBtn.addEventListener("click", openDrawer);
 el.closeDrawerBtn.addEventListener("click", closeDrawer);
-el.drawerBackdrop.addEventListener("click", closeDrawer);
+el.drawerBackdrop.addEventListener("click", () => {
+  closeDrawer();
+  closeAccountDrawer();
+});
 
 function metricLabel(metric) {
   return { cpuLoad: "CPU load", memUsedPct: "Memory", diskUsedPct: "Disk" }[metric] || metric;
@@ -232,28 +256,174 @@ function renderDrawer() {
 
   el.activeAlertsList.querySelectorAll(".ack-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      await api(`/api/alerts/${btn.dataset.id}/ack`, { method: "POST" }).catch(() => {});
+      await api(`/api/alerts/${btn.dataset.id}/ack`, { method: "POST" }).catch(showError);
       await loadAlerts();
       renderDrawer();
     });
   });
 
+  const canEditRules = atLeast(state.role, "technician");
+  const canDeleteRules = atLeast(state.role, "admin");
+
   el.rulesList.innerHTML = state.rules.length
     ? state.rules.map((r) => `
-        <div class="rule-row">
-          <span>${metricLabel(r.metric)} ${r.comparator} ${r.threshold}${r.webhook_url ? " · webhook" : ""}</span>
-          <button class="del-btn" data-id="${r.id}">delete</button>
+        <div class="rule-row ${r.enabled ? "" : "disabled"}">
+          <span>${metricLabel(r.metric)} ${r.comparator} ${r.threshold}${r.webhook_url ? " · webhook" : ""}${r.enabled ? "" : " · paused"}</span>
+          <span class="rule-row-actions">
+            ${canEditRules ? `<button class="link-btn" data-toggle="${r.id}" data-enabled="${r.enabled ? "1" : "0"}">${r.enabled ? "pause" : "resume"}</button>` : ""}
+            ${canDeleteRules ? `<button class="del-btn" data-id="${r.id}">delete</button>` : ""}
+          </span>
         </div>`).join("")
     : `<div class="empty-hint">No rules yet — endpoints won't alert until you add one.</div>`;
 
+  el.rulesList.querySelectorAll("[data-toggle]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      await api(`/api/alert-rules/${btn.dataset.toggle}`, {
+        method: "PATCH",
+        body: JSON.stringify({ enabled: btn.dataset.enabled !== "1" }),
+      }).catch(showError);
+      await loadRules();
+      renderDrawer();
+    });
+  });
+
   el.rulesList.querySelectorAll(".del-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      await api(`/api/alert-rules/${btn.dataset.id}`, { method: "DELETE" }).catch(() => {});
+      await api(`/api/alert-rules/${btn.dataset.id}`, { method: "DELETE" }).catch(showError);
       await loadRules();
       renderDrawer();
     });
   });
 }
+
+function showError(err) {
+  if (window.SC && SC.toast) SC.toast.show(err.message, { variant: "danger" });
+  else console.error(err);
+}
+
+// ---- Account drawer: password change + user management ----
+function openAccountDrawer() {
+  closeDrawer();
+  el.accountDrawer.classList.add("open");
+  el.drawerBackdrop.classList.add("open");
+  if (atLeast(state.role, "admin")) loadUsers().then(renderUsers);
+}
+function closeAccountDrawer() {
+  el.accountDrawer.classList.remove("open");
+  el.drawerBackdrop.classList.remove("open");
+}
+el.accountBtn.addEventListener("click", openAccountDrawer);
+el.closeAccountBtn.addEventListener("click", closeAccountDrawer);
+
+function setMessage(node, text, kind) {
+  node.textContent = text;
+  node.classList.toggle("ok", kind === "ok");
+  node.classList.toggle("error", kind === "error");
+}
+
+el.passwordForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const currentPassword = document.getElementById("currentPassword");
+  const newPassword = document.getElementById("newPassword");
+  try {
+    await api("/api/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword: currentPassword.value, newPassword: newPassword.value }),
+    });
+    currentPassword.value = "";
+    newPassword.value = "";
+    setMessage(el.passwordMessage, "Password updated.", "ok");
+  } catch (err) {
+    setMessage(el.passwordMessage, err.message, "error");
+  }
+});
+
+async function loadUsers() {
+  state.users = await api("/api/users").catch(() => []);
+}
+
+function renderUsers() {
+  if (!atLeast(state.role, "admin")) return;
+  el.usersList.innerHTML = state.users.length
+    ? state.users.map((u) => `
+        <div class="user-row ${u.active ? "" : "inactive"}">
+          <div class="user-row-head">
+            <span class="user-name">${escapeHtml(u.username)}</span>
+            <span class="text-faint">${u.active ? "active" : "deactivated"}</span>
+          </div>
+          <div class="user-meta">${escapeHtml(u.email)} · last login ${u.lastLogin ? new Date(u.lastLogin).toLocaleString() : "never"}</div>
+          <div class="user-actions">
+            <select data-role-for="${u.id}" ${u.id === state.userId ? "disabled" : ""}>
+              ${ROLES.map((r) => `<option value="${r}" ${r === u.role ? "selected" : ""}>${r}</option>`).join("")}
+            </select>
+            ${u.id === state.userId ? "" : `<button class="link-btn ${u.active ? "danger" : ""}" data-active-for="${u.id}" data-active="${u.active ? "1" : "0"}">${u.active ? "deactivate" : "reactivate"}</button>`}
+            <button class="link-btn" data-reset-for="${u.id}">reset password</button>
+          </div>
+        </div>`).join("")
+    : `<div class="empty-hint">No users yet.</div>`;
+
+  el.usersList.querySelectorAll("[data-role-for]").forEach((select) => {
+    select.addEventListener("change", () => patchUser(select.dataset.roleFor, { role: select.value }));
+  });
+  el.usersList.querySelectorAll("[data-active-for]").forEach((btn) => {
+    btn.addEventListener("click", () => patchUser(btn.dataset.activeFor, { active: btn.dataset.active !== "1" }));
+  });
+  el.usersList.querySelectorAll("[data-reset-for]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const newPassword = window.prompt("New password for this user (min 10 characters):");
+      if (!newPassword) return;
+      try {
+        await api(`/api/users/${btn.dataset.resetFor}/reset-password`, {
+          method: "POST",
+          body: JSON.stringify({ newPassword }),
+        });
+        setMessage(el.userMessage, "Password reset.", "ok");
+      } catch (err) {
+        setMessage(el.userMessage, err.message, "error");
+      }
+    });
+  });
+}
+
+async function patchUser(id, patch) {
+  try {
+    await api(`/api/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+    setMessage(el.userMessage, "User updated.", "ok");
+  } catch (err) {
+    setMessage(el.userMessage, err.message, "error");
+  }
+  await loadUsers();
+  renderUsers();
+}
+
+el.userForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fields = {
+    username: document.getElementById("newUsername"),
+    email: document.getElementById("newEmail"),
+    password: document.getElementById("newUserPassword"),
+    role: document.getElementById("newUserRole"),
+  };
+  try {
+    await api("/api/users", {
+      method: "POST",
+      body: JSON.stringify({
+        username: fields.username.value.trim(),
+        email: fields.email.value.trim(),
+        password: fields.password.value,
+        role: fields.role.value,
+      }),
+    });
+    fields.username.value = "";
+    fields.email.value = "";
+    fields.password.value = "";
+    setMessage(el.userMessage, "User created.", "ok");
+    await loadUsers();
+    renderUsers();
+  } catch (err) {
+    setMessage(el.userMessage, err.message, "error");
+  }
+});
 
 el.ruleForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -261,7 +431,7 @@ el.ruleForm.addEventListener("submit", async (e) => {
   const comparator = document.getElementById("ruleComparator").value;
   const threshold = Number(document.getElementById("ruleThreshold").value);
   const webhookUrl = document.getElementById("ruleWebhook").value.trim() || undefined;
-  await api("/api/alert-rules", { method: "POST", body: JSON.stringify({ metric, comparator, threshold, webhookUrl }) }).catch(() => {});
+  await api("/api/alert-rules", { method: "POST", body: JSON.stringify({ metric, comparator, threshold, webhookUrl }) }).catch(showError);
   document.getElementById("ruleThreshold").value = "";
   document.getElementById("ruleWebhook").value = "";
   await loadRules();
@@ -451,35 +621,35 @@ async function renderInventoryTab(body, agentId) {
   body.innerHTML = `
     <div class="inv-grid">
       <div class="metric-card">
-        <div class="metric-label" style="margin-bottom:10px;">System</div>
+        <div class="metric-label card-section-label">System</div>
         ${kv("Model", `${hw.system?.manufacturer || ""} ${hw.system?.model || ""}`.trim())}
         ${kv("OS", `${hw.os?.distro || hw.os?.platform || ""} (${hw.os?.arch || ""})`)}
         ${kv("Kernel", hw.os?.kernel)}
       </div>
       <div class="metric-card">
-        <div class="metric-label" style="margin-bottom:10px;">CPU</div>
+        <div class="metric-label card-section-label">CPU</div>
         ${kv("Model", `${hw.cpu?.manufacturer || ""} ${hw.cpu?.brand || ""}`.trim())}
         ${kv("Cores", `${hw.cpu?.physicalCores || "?"} physical / ${hw.cpu?.cores || "?"} logical`)}
         ${kv("Speed", hw.cpu?.speedGHz ? `${hw.cpu.speedGHz} GHz` : "–")}
       </div>
       <div class="metric-card">
-        <div class="metric-label" style="margin-bottom:10px;">Memory</div>
+        <div class="metric-label card-section-label">Memory</div>
         ${(hw.memoryModules || []).map((m, i) => kv(`Module ${i + 1}`, `${m.sizeGB} GB · ${m.type || "?"}`)).join("") || kv("Modules", "unknown")}
       </div>
       <div class="metric-card">
-        <div class="metric-label" style="margin-bottom:10px;">Disks</div>
+        <div class="metric-label card-section-label">Disks</div>
         ${(hw.disks || []).map((d) => kv(d.name, `${d.sizeGB} GB · ${d.type || d.interfaceType || "?"}`)).join("") || kv("Disks", "unknown")}
       </div>
       <div class="metric-card">
-        <div class="metric-label" style="margin-bottom:10px;">Graphics</div>
+        <div class="metric-label card-section-label">Graphics</div>
         ${(hw.graphics || []).map((g) => kv(g.model, g.vramMB ? `${g.vramMB} MB VRAM` : "")).join("") || kv("GPU", "unknown")}
       </div>
       <div class="metric-card">
-        <div class="metric-label" style="margin-bottom:10px;">Network</div>
+        <div class="metric-label card-section-label">Network</div>
         ${(hw.network || []).map((n) => kv(n.iface, `${n.ip4 || "no IP"} · ${n.mac || ""}`)).join("") || kv("Interfaces", "unknown")}
       </div>
     </div>
-    <div class="metric-card" style="margin-top:16px;">
+    <div class="metric-card card-block">
       <div class="metric-card-head">
         <span class="metric-label">Installed software</span>
         <span class="metric-sub">${(inv.software || []).length} packages · collected ${new Date(inv.collectedAt).toLocaleString()}</span>
@@ -548,8 +718,7 @@ function renderScriptsTab(body, agentId) {
         input.value = "";
         await loadScriptRuns(agentId);
       } catch (err) {
-        if (window.SC && SC.toast) SC.toast.show(err.message, { variant: "danger" });
-        else alert(err.message); // fallback if the design-system scripts didn't load
+        showError(err);
         state.scriptPending = false;
       } finally {
         btn.disabled = false;

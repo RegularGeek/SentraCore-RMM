@@ -24,7 +24,7 @@ window.SC = window.SC || {};
     el.setAttribute("role", variant === "danger" || variant === "warning" ? "alert" : "status");
     el.innerHTML = `
       <span class="sc-toast-message sc-text-small">${escapeHtml(message)}</span>
-      <button class="sc-btn sc-btn--ghost sc-btn--icon sc-btn--sm" aria-label="Dismiss notification" style="margin-left:auto;">
+      <button class="sc-btn sc-btn--ghost sc-btn--icon sc-btn--sm toast-dismiss" aria-label="Dismiss notification">
         <i data-lucide="x" class="sc-icon-16"></i>
       </button>
     `;

@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'admin',
+  active INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL,
   updated_at INTEGER,
   last_login INTEGER
@@ -113,6 +114,16 @@ CREATE TABLE IF NOT EXISTS login_attempts (
   ts INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_login_attempts_ident_ts ON login_attempts(identifier, ts);
+
+-- Backing store for express-session (see auth/sessionStore.js). Keeping
+-- sessions here instead of MemoryStore means a server restart no longer
+-- signs everyone out.
+CREATE TABLE IF NOT EXISTS sessions (
+  sid TEXT PRIMARY KEY,
+  data TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 `);
 
 // --- Idempotent migration guard for DBs created by v0.2 (before email/
@@ -129,6 +140,9 @@ if (!columnExists("users", "email")) {
 }
 if (!columnExists("users", "updated_at")) db.exec(`ALTER TABLE users ADD COLUMN updated_at INTEGER`);
 if (!columnExists("users", "last_login")) db.exec(`ALTER TABLE users ADD COLUMN last_login INTEGER`);
+if (!columnExists("users", "active")) {
+  db.exec(`ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1`);
+}
 
 const now = () => Date.now();
 const uid = () => crypto.randomUUID();
@@ -151,10 +165,29 @@ module.exports = {
   getUserById: (id) => db.prepare("SELECT * FROM users WHERE id = ?").get(id),
   createUser: (u) => {
     db.prepare(`
-      INSERT INTO users (id, org_id, email, username, password_hash, role, created_at, updated_at)
-      VALUES (@id, @org_id, @email, @username, @password_hash, @role, @created_at, @created_at)
+      INSERT INTO users (id, org_id, email, username, password_hash, role, active, created_at, updated_at)
+      VALUES (@id, @org_id, @email, @username, @password_hash, @role, 1, @created_at, @created_at)
     `).run(u);
   },
+  getUsersByOrg: (orgId) =>
+    db.prepare(`
+      SELECT id, org_id, email, username, role, active, created_at, updated_at, last_login
+      FROM users WHERE org_id = ? ORDER BY username
+    `).all(orgId),
+  countActiveAdmins: (orgId) =>
+    db.prepare(`
+      SELECT COUNT(*) AS n FROM users
+      WHERE org_id = ? AND active = 1 AND role IN ('admin', 'superadmin')
+    `).get(orgId).n,
+  updateUserRole: (id, orgId, role) =>
+    db.prepare("UPDATE users SET role = ?, updated_at = ? WHERE id = ? AND org_id = ?")
+      .run(role, now(), id, orgId),
+  setUserActive: (id, orgId, active) =>
+    db.prepare("UPDATE users SET active = ?, updated_at = ? WHERE id = ? AND org_id = ?")
+      .run(active ? 1 : 0, now(), id, orgId),
+  updateUserPassword: (id, passwordHash) =>
+    db.prepare("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?")
+      .run(passwordHash, now(), id),
   touchLastLogin: (userId) =>
     db.prepare("UPDATE users SET last_login = ? WHERE id = ?").run(now(), userId),
   recordLoginAttempt: (identifier, ip, success) =>
@@ -211,6 +244,9 @@ module.exports = {
       VALUES (@id, @org_id, @metric, @comparator, @threshold, 1, @webhook_url, @created_at)
     `).run(r);
   },
+  getRule: (id, orgId) => db.prepare("SELECT * FROM alert_rules WHERE id = ? AND org_id = ?").get(id, orgId),
+  setRuleEnabled: (id, orgId, enabled) =>
+    db.prepare("UPDATE alert_rules SET enabled = ? WHERE id = ? AND org_id = ?").run(enabled ? 1 : 0, id, orgId),
   deleteRule: (id, orgId) => db.prepare("DELETE FROM alert_rules WHERE id = ? AND org_id = ?").run(id, orgId),
 
   // ---- Alert events ----
@@ -247,4 +283,18 @@ module.exports = {
   getScriptRunsByAgent: (agentId, limit = 25) =>
     db.prepare("SELECT * FROM script_runs WHERE agent_id = ? ORDER BY requested_at DESC LIMIT ?").all(agentId, limit),
   getScriptRun: (id) => db.prepare("SELECT * FROM script_runs WHERE id = ?").get(id),
+
+  // ---- Sessions (express-session store) ----
+  getSession: (sid) => db.prepare("SELECT * FROM sessions WHERE sid = ?").get(sid),
+  upsertSession: (sid, data, expiresAt) =>
+    db.prepare(`
+      INSERT INTO sessions (sid, data, expires_at) VALUES (?, ?, ?)
+      ON CONFLICT(sid) DO UPDATE SET data = excluded.data, expires_at = excluded.expires_at
+    `).run(sid, data, expiresAt),
+  deleteSession: (sid) => db.prepare("DELETE FROM sessions WHERE sid = ?").run(sid),
+  deleteExpiredSessions: (nowTs = now()) =>
+    db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(nowTs),
+  countSessions: () => db.prepare("SELECT COUNT(*) AS n FROM sessions").get().n,
+
+  close: () => db.close(),
 };

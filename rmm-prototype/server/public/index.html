@@ -9,7 +9,7 @@
 <!-- SentraCore Design System v1.0 -->
 <link rel="stylesheet" href="/ui/styles/index.css" />
 <link rel="stylesheet" href="/styles.css" />
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="https://unpkg.com/lucide@1.22.0/dist/umd/lucide.js" defer></script>
 <script src="/ui/icons/icons.js" defer></script>
 <script src="/ui/hooks/useMediaQuery.js" defer></script>
 <script src="/ui/hooks/useSidebarToggle.js" defer></script>
@@ -20,7 +20,7 @@
   <div class="app sc-layout-dashboard">
     <header class="topbar">
       <div class="brand">
-        <button class="sc-btn sc-btn--ghost sc-btn--icon" id="sidebarToggleBtn" aria-label="Toggle endpoint list" aria-expanded="false" style="display:none;">
+        <button class="sc-btn sc-btn--ghost sc-btn--icon sidebar-toggle" id="sidebarToggleBtn" aria-label="Toggle endpoint list" aria-expanded="false">
           <i data-lucide="menu" class="sc-icon-20"></i>
         </button>
         <span class="brand-mark brand-mark-blue" aria-hidden="true"></span>
@@ -36,6 +36,10 @@
           <span class="conn-dot" id="connDot"></span>
           <span id="connLabel">connecting…</span>
         </div>
+        <button class="icon-btn" id="accountBtn" title="Account & users">
+          <i data-lucide="user-cog" class="sc-icon-16"></i>
+          <span>account</span>
+        </button>
         <div class="session" id="sessionInfo"></div>
         <button class="icon-btn" id="logoutBtn" title="Sign out">
           <i data-lucide="log-out" class="sc-icon-16"></i>
@@ -95,6 +99,42 @@
         <input id="ruleThreshold" type="number" placeholder="threshold" required />
         <input id="ruleWebhook" type="text" placeholder="webhook URL (optional)" />
         <button type="submit">Add rule</button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Account drawer: self-service password change + (admin only) user management -->
+  <aside class="drawer" id="accountDrawer">
+    <div class="drawer-head">
+      <span>Account</span>
+      <button class="icon-btn" id="closeAccountBtn">close</button>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">Change your password</div>
+      <form id="passwordForm" class="stack-form">
+        <input id="currentPassword" type="password" autocomplete="current-password" placeholder="current password" required />
+        <input id="newPassword" type="password" autocomplete="new-password" placeholder="new password (min 10 chars)" required />
+        <button type="submit">Update password</button>
+        <div class="form-message" id="passwordMessage" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+
+    <div class="drawer-section is-hidden" id="usersSection">
+      <div class="drawer-section-title">Users</div>
+      <div id="usersList" class="users-list"></div>
+      <form id="userForm" class="stack-form">
+        <input id="newUsername" type="text" autocomplete="off" placeholder="username" required />
+        <input id="newEmail" type="email" autocomplete="off" placeholder="email" required />
+        <input id="newUserPassword" type="password" autocomplete="new-password" placeholder="initial password (min 10 chars)" required />
+        <select id="newUserRole">
+          <option value="readonly">readonly</option>
+          <option value="technician" selected>technician</option>
+          <option value="admin">admin</option>
+          <option value="superadmin">superadmin</option>
+        </select>
+        <button type="submit">Create user</button>
+        <div class="form-message" id="userMessage" role="status" aria-live="polite"></div>
       </form>
     </div>
   </aside>

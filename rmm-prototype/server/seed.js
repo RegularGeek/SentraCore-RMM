@@ -3,7 +3,7 @@
 
 const crypto = require("crypto");
 const { db, uid, now, getUserByUsername } = require("./database/db");
-const { hashPassword } = require("./auth/password");
+const { hashPassword, validatePassword } = require("./auth/password");
 
 async function main() {
   const existingOrg = db.prepare("SELECT * FROM orgs WHERE name = ?").get("Default Org");
@@ -37,6 +37,11 @@ async function main() {
 
   const existingUser = getUserByUsername(username);
   if (!existingUser) {
+    const invalid = validatePassword(password);
+    if (invalid) {
+      console.error(`\nSEED_ADMIN_PASS rejected: ${invalid}.\n`);
+      process.exit(1);
+    }
     const hash = await hashPassword(password);
     db.prepare(`
       INSERT INTO users (id, org_id, email, username, password_hash, role, created_at, updated_at)
@@ -55,7 +60,12 @@ async function main() {
   console.log("\n Agent token (set as AGENT_TOKEN when starting an agent):");
   console.log("  ", org.agent_token);
   console.log("──────────────────────────────────────────────\n");
-  console.log("Change the admin password after first login in a real deployment (no change-password UI yet, see README).");
+  console.log("Sign in, then use Account → Change your password to rotate it, and Account → Users to invite the rest of your team.");
 }
 
-main().then(() => process.exit(0));
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("[seed] failed:", err.message);
+    process.exit(1);
+  });
