@@ -1,0 +1,69 @@
+/*
+  SentraCore Design System v1.0 — Layouts
+  Page-level shells. Each existing/future page picks one.
+    .sc-layout-auth       -> login.html (built)
+    .sc-layout-dashboard  -> index.html (built)
+    .sc-layout-detail     -> a future standalone device-detail page (the
+                              dashboard currently shows device detail inline
+                              in the right pane rather than as its own
+                              route - this class is ready for when it is)
+    .sc-layout-settings   -> future settings page (not built yet)
+    .sc-layout-report     -> future exportable report view (not built yet)
+*/
+
+/* ---- Auth layout: centered card on a plain surface ---- */
+.sc-layout-auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--sc-primary) 10%, transparent), transparent 45%),
+    radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--sc-primary) 6%, transparent), transparent 50%),
+    var(--sc-background);
+}
+
+/* ---- Dashboard layout: topbar + collapsible sidebar + main content ---- */
+.sc-layout-dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.sc-layout-dashboard-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.sc-layout-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sc-space-6);
+}
+
+/* ---- Device detail layout: header block + tabs + content, same shell
+   as the dashboard's right pane today; split out so a future standalone
+   /devices/:id route can reuse it without depending on the sidebar. ---- */
+.sc-layout-detail-head { margin-bottom: var(--sc-space-6); }
+
+/* ---- Settings layout: narrow single column with left-hand section nav ---- */
+.sc-layout-settings {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: var(--sc-space-8);
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--sc-space-8) var(--sc-space-6);
+}
+@media (max-width: 700px) {
+  .sc-layout-settings { grid-template-columns: 1fr; }
+}
+
+/* ---- Report layout: print/export-oriented, wider content column, no chrome ---- */
+.sc-layout-report {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--sc-space-8) var(--sc-space-6);
+}
+@media print {
+  .sc-layout-report .sc-no-print { display: none; }
+}

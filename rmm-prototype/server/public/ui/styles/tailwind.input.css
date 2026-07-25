@@ -1,0 +1,10 @@
+/*
+  Tailwind entry point. Compiled by the standalone Tailwind CLI:
+    npm run build:css        (one-off)
+    npm run watch:css        (dev)
+  Output: server/public/ui/styles/tailwind.build.css (generated, gitignored).
+  See package.json and docs/DESIGN_SYSTEM.md > Tailwind.
+*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

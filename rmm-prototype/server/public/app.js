@@ -25,6 +25,8 @@ const state = {
 const el = {
   connDot: document.getElementById("connDot"),
   connLabel: document.getElementById("connLabel"),
+  sidebarEl: document.getElementById("sidebarEl"),
+  sidebarToggleBtn: document.getElementById("sidebarToggleBtn"),
   agentList: document.getElementById("agentList"),
   agentCount: document.getElementById("agentCount"),
   detail: document.getElementById("detail"),
@@ -75,6 +77,9 @@ async function boot() {
     return; // api() already redirected to /login.html
   }
   await Promise.all([loadAlerts(), loadRules()]);
+  if (window.SC && SC.useSidebarToggle) {
+    SC.useSidebarToggle({ sidebar: el.sidebarEl, toggleBtn: el.sidebarToggleBtn });
+  }
   connect();
   renderAll();
 }
@@ -398,10 +403,10 @@ function renderOverviewTab(body, a) {
     </div>
     ${a.status === "offline" ? `<div class="offline-banner">This endpoint is offline. Showing last known metrics.</div>` : ""}
   `;
-  drawTrace("trace-cpu", a.history.cpu, "#4FD1C5", 100, HISTORY_LEN);
-  drawTrace("trace-mem", a.history.mem, "#F0A857", 100, HISTORY_LEN);
-  drawTrace("trace-disk", a.history.disk, "#E5675A", 100, HISTORY_LEN);
-  drawTraceDual("trace-net", a.history.netRx, a.history.netTx, "#4FD1C5", "#8A94A6", HISTORY_LEN);
+  drawTrace("trace-cpu", a.history.cpu, "#2563EB", 100, HISTORY_LEN);
+  drawTrace("trace-mem", a.history.mem, "#F59E0B", 100, HISTORY_LEN);
+  drawTrace("trace-disk", a.history.disk, "#EF4444", 100, HISTORY_LEN);
+  drawTraceDual("trace-net", a.history.netRx, a.history.netTx, "#2563EB", "#94A3B8", HISTORY_LEN);
 }
 
 // ---- History tab (persisted trends) ----
@@ -427,9 +432,9 @@ async function renderHistoryTab(body, agentId) {
     ${metricCard("Memory", "", `last ${state.historyRange}`, "hist-mem")}
     ${metricCard("Disk", "", `last ${state.historyRange}`, "hist-disk")}
   `;
-  drawTrace("hist-cpu", rows.map((r) => r.cpuLoad), "#4FD1C5", 100);
-  drawTrace("hist-mem", rows.map((r) => r.memUsedPct), "#F0A857", 100);
-  drawTrace("hist-disk", rows.map((r) => r.diskUsedPct), "#E5675A", 100);
+  drawTrace("hist-cpu", rows.map((r) => r.cpuLoad), "#2563EB", 100);
+  drawTrace("hist-mem", rows.map((r) => r.memUsedPct), "#F59E0B", 100);
+  drawTrace("hist-disk", rows.map((r) => r.diskUsedPct), "#EF4444", 100);
 }
 
 // ---- Inventory tab ----
@@ -543,7 +548,8 @@ function renderScriptsTab(body, agentId) {
         input.value = "";
         await loadScriptRuns(agentId);
       } catch (err) {
-        alert(err.message);
+        if (window.SC && SC.toast) SC.toast.show(err.message, { variant: "danger" });
+        else alert(err.message); // fallback if the design-system scripts didn't load
         state.scriptPending = false;
       } finally {
         btn.disabled = false;
@@ -590,7 +596,7 @@ function drawTrace(canvasId, values, color, maxScale, totalSlots) {
   ctx.strokeStyle = color;
   ctx.lineWidth = 1.75;
   ctx.shadowColor = color;
-  ctx.shadowBlur = 6;
+  ctx.shadowBlur = 2; // subtle - enterprise brief avoids neon/dramatic glow
   ctx.stroke();
 
   const lastX = pad + (offset + values.length - 1) * step;
@@ -598,7 +604,7 @@ function drawTrace(canvasId, values, color, maxScale, totalSlots) {
   ctx.beginPath();
   ctx.arc(lastX, lastY, 2.5, 0, Math.PI * 2);
   ctx.fillStyle = color;
-  ctx.shadowBlur = 8;
+  ctx.shadowBlur = 3;
   ctx.fill();
 }
 
@@ -623,7 +629,7 @@ function drawTraceDual(canvasId, valuesA, valuesB, colorA, colorB, totalSlots) {
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
     ctx.shadowColor = color;
-    ctx.shadowBlur = 5;
+    ctx.shadowBlur = 2;
     ctx.stroke();
   };
   plot(valuesA, colorA);

@@ -1,0 +1,37 @@
+/*
+  SentraCore Design System v1.0 — Badges
+  Usage: <span class="sc-badge sc-badge--online">Online</span>
+  Every status color used across the app (agent status, alert severity,
+  script-run status) should map to exactly one of these variants -
+  see docs/DESIGN_SYSTEM.md > Badges for the mapping table.
+*/
+
+.sc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  font-size: var(--sc-text-caption-size);
+  font-weight: var(--sc-text-caption-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px var(--sc-space-2);
+  border-radius: var(--sc-radius-full);
+  border: 1px solid transparent;
+  line-height: 1.6;
+}
+.sc-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.sc-badge--online   { color: var(--sc-success); background: color-mix(in srgb, var(--sc-success) 14%, transparent); }
+.sc-badge--healthy  { color: var(--sc-success); background: color-mix(in srgb, var(--sc-success) 14%, transparent); }
+.sc-badge--offline  { color: var(--sc-text-muted); background: color-mix(in srgb, var(--sc-text-muted) 14%, transparent); }
+.sc-badge--warning  { color: var(--sc-warning); background: color-mix(in srgb, var(--sc-warning) 14%, transparent); }
+.sc-badge--maintenance { color: var(--sc-warning); background: color-mix(in srgb, var(--sc-warning) 14%, transparent); }
+.sc-badge--critical { color: var(--sc-danger); background: color-mix(in srgb, var(--sc-danger) 14%, transparent); }
+.sc-badge--info     { color: var(--sc-info); background: color-mix(in srgb, var(--sc-info) 14%, transparent); }

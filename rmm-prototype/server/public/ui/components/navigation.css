@@ -1,0 +1,135 @@
+/*
+  SentraCore Design System v1.0 — Navigation
+  Sidebar/top-nav classes match the dashboard's existing structure so the
+  refactor of index.html is a class-rename, not a markup rewrite.
+*/
+
+/* ---- Top navigation ---- */
+.sc-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--sc-topbar-height);
+  padding: 0 var(--sc-space-6);
+  border-bottom: 1px solid var(--sc-border);
+  background: var(--sc-surface);
+  flex-shrink: 0;
+  position: relative;
+  z-index: var(--sc-header-z);
+}
+
+/* ---- Sidebar ---- */
+.sc-sidebar {
+  width: var(--sc-sidebar-width);
+  flex-shrink: 0;
+  border-right: 1px solid var(--sc-border);
+  background: var(--sc-surface);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: transform var(--sc-transition-base), width var(--sc-transition-base);
+}
+/* Collapsed state for small screens - toggled via a JS-added class on
+   the sidebar, not a media query alone, so it can be user-triggered too. */
+.sc-sidebar.is-collapsed {
+  width: 0;
+  border-right: none;
+  overflow: hidden;
+}
+@media (max-width: 900px) {
+  .sc-sidebar {
+    position: fixed;
+    top: var(--sc-topbar-height);
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    z-index: var(--sc-drawer-z);
+    box-shadow: var(--sc-shadow-lg);
+  }
+  .sc-sidebar.is-open { transform: translateX(0); }
+}
+
+/* ---- Breadcrumb ---- */
+.sc-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  font-size: var(--sc-text-small-size);
+  color: var(--sc-text-muted);
+}
+.sc-breadcrumb a { color: var(--sc-text-secondary); text-decoration: none; }
+.sc-breadcrumb a:hover { color: var(--sc-text-primary); }
+.sc-breadcrumb .sc-breadcrumb-sep { color: var(--sc-text-muted); }
+.sc-breadcrumb [aria-current="page"] { color: var(--sc-text-primary); }
+
+/* ---- Tabs ---- */
+.sc-tabs {
+  display: flex;
+  gap: var(--sc-space-1);
+  border-bottom: 1px solid var(--sc-border);
+  margin-top: var(--sc-space-4);
+}
+.sc-tab {
+  background: transparent;
+  border: none;
+  color: var(--sc-text-muted);
+  font-family: var(--sc-font-sans);
+  font-size: var(--sc-text-small-size);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: var(--sc-space-2) var(--sc-space-1);
+  margin-right: var(--sc-space-4);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color var(--sc-transition-fast);
+}
+.sc-tab:hover { color: var(--sc-text-secondary); }
+.sc-tab[aria-selected="true"] { color: var(--sc-primary); border-bottom-color: var(--sc-primary); }
+
+/* ---- Dropdown / context menu ---- */
+.sc-menu {
+  min-width: 180px;
+  background: var(--sc-surface-elevated);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-md);
+  box-shadow: var(--sc-shadow-md);
+  padding: var(--sc-space-1);
+}
+.sc-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+  width: 100%;
+  padding: var(--sc-space-2) var(--sc-space-3);
+  border-radius: var(--sc-radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--sc-text-primary);
+  font-size: var(--sc-text-body-size);
+  text-align: left;
+  cursor: pointer;
+}
+.sc-menu-item:hover, .sc-menu-item:focus-visible { background: var(--sc-surface); }
+.sc-menu-item--danger { color: var(--sc-danger); }
+.sc-menu-separator { height: 1px; background: var(--sc-border); margin: var(--sc-space-1) 0; }
+
+/* ---- Pagination ---- */
+.sc-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  font-size: var(--sc-text-small-size);
+  color: var(--sc-text-secondary);
+}
+.sc-pagination button {
+  min-width: 28px;
+  height: 28px;
+  border-radius: var(--sc-radius-sm);
+  border: 1px solid var(--sc-border);
+  background: var(--sc-surface);
+  color: var(--sc-text-secondary);
+  cursor: pointer;
+}
+.sc-pagination button[aria-current="true"] { border-color: var(--sc-primary); color: var(--sc-primary); }
+.sc-pagination button:disabled { opacity: 0.4; cursor: not-allowed; }

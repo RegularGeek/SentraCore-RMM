@@ -1,0 +1,62 @@
+/*
+  SentraCore Design System v1.0 — Base
+  Resets + typography utility classes built on ui/tokens/tokens.css.
+  Loaded after tokens.css, before component CSS.
+*/
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--sc-background);
+  color: var(--sc-text-primary);
+  font-family: var(--sc-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sensible default focus ring everywhere, individual components may
+   refine but nothing should ever end up with no visible focus state. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--sc-shadow-focus);
+  border-radius: var(--sc-radius-sm);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--sc-border); border-radius: var(--sc-radius-full); }
+::-webkit-scrollbar-track { background: transparent; }
+
+a { color: inherit; }
+
+/* ---- Typography scale ---- */
+.sc-text-display { font-size: var(--sc-text-display-size); line-height: var(--sc-text-display-lh); font-weight: var(--sc-text-display-weight); margin: 0; }
+.sc-text-h1 { font-size: var(--sc-text-h1-size); line-height: var(--sc-text-h1-lh); font-weight: var(--sc-text-h1-weight); margin: 0; }
+.sc-text-h2 { font-size: var(--sc-text-h2-size); line-height: var(--sc-text-h2-lh); font-weight: var(--sc-text-h2-weight); margin: 0; }
+.sc-text-h3 { font-size: var(--sc-text-h3-size); line-height: var(--sc-text-h3-lh); font-weight: var(--sc-text-h3-weight); margin: 0; }
+.sc-text-h4 { font-size: var(--sc-text-h4-size); line-height: var(--sc-text-h4-lh); font-weight: var(--sc-text-h4-weight); margin: 0; }
+.sc-text-body-lg { font-size: var(--sc-text-body-lg-size); line-height: var(--sc-text-body-lg-lh); font-weight: var(--sc-text-body-lg-weight); }
+.sc-text-body { font-size: var(--sc-text-body-size); line-height: var(--sc-text-body-lh); font-weight: var(--sc-text-body-weight); }
+.sc-text-small { font-size: var(--sc-text-small-size); line-height: var(--sc-text-small-lh); font-weight: var(--sc-text-small-weight); }
+.sc-text-caption { font-size: var(--sc-text-caption-size); line-height: var(--sc-text-caption-lh); font-weight: var(--sc-text-caption-weight); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.sc-text-secondary { color: var(--sc-text-secondary); }
+.sc-text-muted { color: var(--sc-text-muted); }
+.sc-text-mono { font-family: var(--sc-font-mono); }
+
+/* ---- Icon sizing (paired with Lucide - see ui/icons/icons.js) ---- */
+.sc-icon-16 { width: var(--sc-icon-16); height: var(--sc-icon-16); }
+.sc-icon-20 { width: var(--sc-icon-20); height: var(--sc-icon-20); }
+.sc-icon-24 { width: var(--sc-icon-24); height: var(--sc-icon-24); }
+.sc-icon-32 { width: var(--sc-icon-32); height: var(--sc-icon-32); }
+
+/* ---- Visually-hidden helper for accessible labels ---- */
+.sc-sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

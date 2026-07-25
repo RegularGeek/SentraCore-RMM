@@ -5,22 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SentraCore RMM · Sign in</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- SentraCore Design System v1.0 -->
+<link rel="stylesheet" href="/ui/styles/index.css" />
 <link rel="stylesheet" href="/styles.css" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="/ui/icons/icons.js" defer></script>
 </head>
-<body class="login-body">
-  <form class="login-card" id="loginForm">
-    <div class="brand" style="margin-bottom: 22px;">
+<body class="sc-layout-auth">
+  <form class="sc-card" id="loginForm" style="width: 340px; display:flex; flex-direction:column; gap: var(--sc-space-4);">
+    <div class="brand" style="margin-bottom: var(--sc-space-2); display:flex; align-items:center; gap: var(--sc-space-2);">
       <span class="brand-mark brand-mark-blue" aria-hidden="true"></span>
-      <span class="brand-name">SentraCore <span class="brand-sub">RMM // Beta</span></span>
+      <span class="brand-name sc-text-h4">SentraCore <span class="sc-text-secondary sc-text-body">RMM // Beta</span></span>
     </div>
-    <label class="login-label">Username</label>
-    <input class="login-input" id="username" name="username" autocomplete="username" autofocus />
-    <label class="login-label">Password</label>
-    <input class="login-input" id="password" name="password" type="password" autocomplete="current-password" />
-    <button class="login-btn" type="submit">Sign in</button>
-    <div class="login-error" id="loginError"></div>
-    <div class="login-hint">First time? Run <code>SEED_ADMIN_PASS='...' npm run seed</code> in <code>/server</code> for a login and agent token.</div>
+
+    <div class="sc-field">
+      <label class="sc-label" for="username">Username</label>
+      <input class="sc-input" id="username" name="username" autocomplete="username" autofocus />
+    </div>
+
+    <div class="sc-field">
+      <label class="sc-label" for="password">Password</label>
+      <div class="sc-password-field">
+        <input class="sc-input" id="password" name="password" type="password" autocomplete="current-password" />
+      </div>
+    </div>
+
+    <button class="sc-btn sc-btn--primary sc-btn--lg" type="submit" style="margin-top: var(--sc-space-2);">Sign in</button>
+
+    <div class="sc-field-error" id="loginError" role="alert" aria-live="polite"></div>
+    <div class="sc-text-caption sc-text-muted" style="text-transform:none; letter-spacing:normal; line-height:1.6;">
+      First time? Run <code>SEED_ADMIN_PASS='...' npm run seed</code> in <code>/server</code> for a login and agent token.
+    </div>
   </form>
   <script src="/login.js"></script>
 </body>

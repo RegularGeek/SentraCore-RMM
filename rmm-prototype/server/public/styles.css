@@ -1,22 +1,30 @@
+/*
+  This file is the pre-design-system page CSS (agent list, oscilloscope
+  traces, drawer, etc.) that hasn't been migrated to ui/ component classes
+  yet - see docs/DESIGN_SYSTEM.md > Technical debt. Every color below is
+  now aliased to a Design System v1.0 token (ui/tokens/tokens.css, loaded
+  first) instead of a hardcoded hex value, so there is exactly one place
+  a color is ever defined. Selectors and class names are UNCHANGED so
+  app.js/login.js keep working without modification.
+*/
 :root {
-  --bg: #0F1419;
-  --surface: #171D26;
-  --surface-raised: #1D2530;
-  --border: #262E3A;
-  --text: #E4E9F0;
-  --text-dim: #8A94A6;
-  --text-faint: #5B6474;
-  --cyan: #4FD1C5;
-  --amber: #F0A857;
-  --red: #E5675A;
-  /* SentraCore brand blue — used for the login screen and brand mark per
-     the "enterprise cybersecurity" brief. The live dashboard keeps its
-     existing cyan accent (--cyan) since it's load-bearing UI (status dots,
-     traces, active tab) and changing it wasn't asked for / isn't necessary. */
-  --brand-blue: #3B82F6;
-  --brand-blue-dim: #1E3A8A;
-  --font-display: 'Space Grotesk', sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  --bg: var(--sc-background);
+  --surface: var(--sc-surface);
+  --surface-raised: var(--sc-surface-elevated);
+  --border: var(--sc-border);
+  --text: var(--sc-text-primary);
+  --text-dim: var(--sc-text-secondary);
+  --text-faint: var(--sc-text-muted);
+  /* "cyan" kept as a variable name for backward compatibility with the
+     rest of this file, but now points at the design system's accent
+     token instead of a separate neon-cyan hex value. */
+  --cyan: var(--sc-accent);
+  --amber: var(--sc-warning);
+  --red: var(--sc-danger);
+  --brand-blue: var(--sc-primary);
+  --brand-blue-dim: var(--sc-primary-hover);
+  --font-display: var(--sc-font-sans);
+  --font-mono: var(--sc-font-mono);
 }
 
 * { box-sizing: border-box; }
@@ -95,6 +103,24 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  transition: transform var(--sc-transition-base);
+}
+
+/* Responsive: below 900px the sidebar becomes a toggled drawer instead of
+   a permanent column (Design System v1.0 > Responsive). #sidebarToggleBtn
+   is wired up by ui/hooks/useSidebarToggle.js in app.js. */
+@media (max-width: 900px) {
+  #sidebarToggleBtn { display: inline-flex !important; }
+  .sidebar {
+    position: fixed;
+    top: var(--sc-topbar-height);
+    bottom: 0;
+    left: 0;
+    z-index: var(--sc-drawer-z);
+    transform: translateX(-100%);
+    box-shadow: var(--sc-shadow-lg);
+  }
+  .sidebar.is-open { transform: translateX(0); }
 }
 
 .sidebar-head {
@@ -252,59 +278,9 @@ canvas.trace { display: block; width: 100%; height: 56px; }
 
 .text-faint { color: var(--text-faint); }
 
-/* ---- Login page ---- */
-.login-body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.10), transparent 45%),
-    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.06), transparent 50%),
-    var(--bg);
-}
-.login-card {
-  width: 340px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 30px 28px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.06), 0 20px 60px rgba(0, 0, 0, 0.35);
-}
-.login-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-dim);
-  margin: 12px 0 6px;
-}
-.login-input {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 9px 10px;
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: 13px;
-}
-.login-input:focus { outline: 1px solid var(--brand-blue); border-color: var(--brand-blue); }
-.login-btn {
-  margin-top: 20px;
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
-  background: var(--brand-blue);
-  color: #F5F8FF;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-}
-.login-btn:hover { filter: brightness(1.1); }
-.login-error { color: var(--red); font-size: 12px; margin-top: 10px; min-height: 14px; }
-.login-hint { color: var(--text-faint); font-size: 11px; margin-top: 14px; line-height: 1.6; }
-.login-hint code { color: var(--text-dim); background: var(--surface-raised); padding: 1px 4px; border-radius: 3px; }
+/* Login page markup now consumes Design System v1.0 components directly
+   (sc-card / sc-field / sc-input / sc-btn — see ui/components/) instead of
+   page-specific classes, so there is nothing login-specific left here. */
 
 /* ---- Topbar right side ---- */
 .topbar-right { display: flex; align-items: center; gap: 16px; }

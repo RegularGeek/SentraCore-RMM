@@ -5,18 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>SentraCore RMM · Live Monitor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- SentraCore Design System v1.0 -->
+<link rel="stylesheet" href="/ui/styles/index.css" />
 <link rel="stylesheet" href="/styles.css" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="/ui/icons/icons.js" defer></script>
+<script src="/ui/hooks/useMediaQuery.js" defer></script>
+<script src="/ui/hooks/useSidebarToggle.js" defer></script>
+<script src="/ui/components/toast.js" defer></script>
+<script src="/ui/components/dialog.js" defer></script>
 </head>
 <body>
-  <div class="app">
+  <div class="app sc-layout-dashboard">
     <header class="topbar">
       <div class="brand">
+        <button class="sc-btn sc-btn--ghost sc-btn--icon" id="sidebarToggleBtn" aria-label="Toggle endpoint list" aria-expanded="false" style="display:none;">
+          <i data-lucide="menu" class="sc-icon-20"></i>
+        </button>
         <span class="brand-mark brand-mark-blue" aria-hidden="true"></span>
         <span class="brand-name">SentraCore <span class="brand-sub">RMM // live monitor</span></span>
       </div>
       <div class="topbar-right">
         <button class="icon-btn" id="alertsBtn" title="Alerts">
+          <i data-lucide="bell" class="sc-icon-16"></i>
           <span>alerts</span>
           <span class="badge" id="alertsBadge" hidden>0</span>
         </button>
@@ -25,12 +37,15 @@
           <span id="connLabel">connecting…</span>
         </div>
         <div class="session" id="sessionInfo"></div>
-        <button class="icon-btn" id="logoutBtn" title="Sign out">sign out</button>
+        <button class="icon-btn" id="logoutBtn" title="Sign out">
+          <i data-lucide="log-out" class="sc-icon-16"></i>
+          <span>sign out</span>
+        </button>
       </div>
     </header>
 
     <div class="body">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebarEl">
         <div class="sidebar-head">
           <span>endpoints</span>
           <span class="count" id="agentCount">0</span>
@@ -84,6 +99,6 @@
     </div>
   </aside>
 
-  <script src="/app.js"></script>
+  <script src="/app.js" defer></script>
 </body>
 </html>

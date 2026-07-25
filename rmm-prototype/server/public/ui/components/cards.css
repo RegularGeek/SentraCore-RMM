@@ -1,0 +1,69 @@
+/*
+  SentraCore Design System v1.0 — Cards
+  Base .sc-card + role modifiers. Metric/statistic cards are the same
+  shape used by the dashboard's existing metric tiles (CPU/Mem/Disk/Net) -
+  see app.js's metricCard() which now emits these classes.
+*/
+
+.sc-card {
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-lg);
+  padding: var(--sc-space-4) var(--sc-space-6);
+  box-shadow: var(--sc-shadow-sm);
+}
+
+.sc-card--elevated { background: var(--sc-surface-elevated); }
+
+.sc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--sc-space-3);
+}
+
+/* Metric / Statistic card — label, big value, optional sub-line, optional
+   sparkline/canvas slot. Used for the four Overview tiles and any future
+   single-number stat block. */
+.sc-card--metric .sc-metric-value {
+  font-family: var(--sc-font-sans);
+  font-size: var(--sc-text-h2-size);
+  font-weight: 700;
+  color: var(--sc-text-primary);
+}
+.sc-card--metric .sc-metric-value .sc-metric-unit {
+  font-size: var(--sc-text-small-size);
+  color: var(--sc-text-secondary);
+  font-weight: 500;
+  margin-left: 3px;
+}
+.sc-card--metric .sc-metric-sub {
+  font-size: var(--sc-text-caption-size);
+  color: var(--sc-text-muted);
+  margin-top: var(--sc-space-1);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Device card — used in an endpoint list/grid (sidebar agent cards use
+   this same shape today). */
+.sc-card--device {
+  cursor: pointer;
+  transition: background-color var(--sc-transition-fast), box-shadow var(--sc-transition-fast);
+}
+.sc-card--device:hover { background: var(--sc-surface-elevated); }
+.sc-card--device.is-selected {
+  background: var(--sc-surface-elevated);
+  box-shadow: inset 3px 0 0 var(--sc-primary);
+}
+
+/* Alert card — used inside the alerts drawer for a single firing/resolved event */
+.sc-card--alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sc-space-3);
+  padding: var(--sc-space-2) var(--sc-space-3);
+}
+.sc-card--alert.is-critical { border-left: 3px solid var(--sc-danger); }
+.sc-card--alert.is-warning { border-left: 3px solid var(--sc-warning); }

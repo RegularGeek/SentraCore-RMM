@@ -1,0 +1,115 @@
+/*
+  SentraCore Design System v1.0 — Tokens
+  ---------------------------------------
+  Single source of truth for color, typography, spacing, radius, shadow,
+  and icon-size tokens. Everything else in the design system (Tailwind
+  config, component CSS) reads from these custom properties instead of
+  hardcoding values, so a token change here propagates everywhere.
+
+  Dark mode is the default and complete. Light mode is architecture-only
+  (tokens defined, not applied across every component yet) — see
+  docs/DESIGN_SYSTEM.md > Themes.
+*/
+
+:root {
+  /* ---- Color: brand ---- */
+  --sc-primary: #2563EB;
+  --sc-primary-hover: #1D4ED8;
+  --sc-accent: #38BDF8;
+
+  /* ---- Color: surfaces ---- */
+  --sc-background: #0F172A;
+  --sc-surface: #1E293B;
+  --sc-surface-elevated: #334155;
+  --sc-border: #334155;
+
+  /* ---- Color: status ---- */
+  --sc-success: #22C55E;
+  --sc-warning: #F59E0B;
+  --sc-danger: #EF4444;
+  --sc-info: #3B82F6;
+
+  /* ---- Color: text ---- */
+  --sc-text-primary: #F8FAFC;
+  --sc-text-secondary: #CBD5E1;
+  --sc-text-muted: #94A3B8;
+
+  /* ---- Typography ---- */
+  --sc-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sc-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Type scale: size / line-height / weight, matched to the requested
+     Display/H1-H4/Body-Large/Body/Small/Caption/Button roles. */
+  --sc-text-display-size: 40px;   --sc-text-display-lh: 48px;   --sc-text-display-weight: 700;
+  --sc-text-h1-size: 32px;        --sc-text-h1-lh: 40px;        --sc-text-h1-weight: 700;
+  --sc-text-h2-size: 24px;        --sc-text-h2-lh: 32px;        --sc-text-h2-weight: 700;
+  --sc-text-h3-size: 20px;        --sc-text-h3-lh: 28px;        --sc-text-h3-weight: 600;
+  --sc-text-h4-size: 16px;        --sc-text-h4-lh: 24px;        --sc-text-h4-weight: 600;
+  --sc-text-body-lg-size: 16px;   --sc-text-body-lg-lh: 24px;   --sc-text-body-lg-weight: 400;
+  --sc-text-body-size: 14px;      --sc-text-body-lh: 20px;      --sc-text-body-weight: 400;
+  --sc-text-small-size: 13px;     --sc-text-small-lh: 18px;     --sc-text-small-weight: 400;
+  --sc-text-caption-size: 12px;   --sc-text-caption-lh: 16px;   --sc-text-caption-weight: 500;
+  --sc-text-button-size: 14px;    --sc-text-button-lh: 20px;    --sc-text-button-weight: 600;
+
+  /* ---- Spacing scale ---- */
+  --sc-space-1: 4px;
+  --sc-space-2: 8px;
+  --sc-space-3: 12px;
+  --sc-space-4: 16px;
+  --sc-space-6: 24px;
+  --sc-space-8: 32px;
+  --sc-space-12: 48px;
+  --sc-space-16: 64px;
+  --sc-space-24: 96px;
+
+  /* ---- Radius ---- */
+  --sc-radius-sm: 4px;
+  --sc-radius-md: 8px;
+  --sc-radius-lg: 12px;
+  --sc-radius-xl: 16px;
+  --sc-radius-full: 9999px;
+
+  /* ---- Shadows: subtle, enterprise. No dramatic floating effects. ---- */
+  --sc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --sc-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.28);
+  --sc-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --sc-shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.45);
+
+  /* ---- Icon sizes ---- */
+  --sc-icon-16: 16px;
+  --sc-icon-20: 20px;
+  --sc-icon-24: 24px;
+  --sc-icon-32: 32px;
+
+  /* ---- Motion: subtle only ---- */
+  --sc-transition-fast: 120ms ease;
+  --sc-transition-base: 180ms ease;
+  --sc-transition-slow: 260ms ease;
+
+  /* ---- Layout ---- */
+  --sc-sidebar-width: 264px;
+  --sc-topbar-height: 60px;
+  --sc-header-z: 30;
+  --sc-drawer-z: 40;
+  --sc-dialog-z: 50;
+  --sc-toast-z: 60;
+}
+
+/*
+  Light theme — architecture only (tokens defined so components that
+  already read var(--sc-*) will respond correctly if [data-theme="light"]
+  is ever applied to <html>), not yet exercised across every component.
+  See docs/DESIGN_SYSTEM.md > Themes for what "architecture only" means.
+*/
+[data-theme="light"] {
+  --sc-background: #F8FAFC;
+  --sc-surface: #FFFFFF;
+  --sc-surface-elevated: #F1F5F9;
+  --sc-border: #E2E8F0;
+  --sc-text-primary: #0F172A;
+  --sc-text-secondary: #334155;
+  --sc-text-muted: #64748B;
+  --sc-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --sc-shadow-md: 0 2px 8px rgba(15, 23, 42, 0.08);
+  --sc-shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.12);
+}

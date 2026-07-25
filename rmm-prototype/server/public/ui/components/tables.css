@@ -1,0 +1,65 @@
+/*
+  SentraCore Design System v1.0 — Tables
+  .sc-table is the base enterprise data table shell. Sortable headers get
+  .sc-th--sortable with an aria-sort attribute managed by JS; pagination
+  uses .sc-pagination (see navigation.css). Today the only large tabular
+  view (installed software in Inventory) uses .sc-table directly; sorting/
+  pagination markup is included here so the next table doesn't reinvent it,
+  but isn't wired to interactive JS yet - see docs/DESIGN_SYSTEM.md > Tables.
+*/
+
+.sc-table-wrap {
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-md);
+  overflow: hidden;
+}
+
+.sc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--sc-text-body-size);
+}
+
+.sc-table thead {
+  background: var(--sc-surface-elevated);
+}
+
+.sc-table th {
+  text-align: left;
+  padding: var(--sc-space-2) var(--sc-space-3);
+  font-size: var(--sc-text-caption-size);
+  font-weight: var(--sc-text-caption-weight);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sc-text-secondary);
+  border-bottom: 1px solid var(--sc-border);
+}
+
+.sc-th--sortable {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+}
+.sc-th--sortable:hover { color: var(--sc-text-primary); }
+
+.sc-table td {
+  padding: var(--sc-space-2) var(--sc-space-3);
+  border-bottom: 1px solid var(--sc-border);
+  color: var(--sc-text-primary);
+}
+.sc-table tbody tr:last-child td { border-bottom: none; }
+.sc-table tbody tr:hover { background: var(--sc-surface-elevated); }
+
+.sc-table-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sc-space-1);
+}
+
+.sc-table-empty {
+  padding: var(--sc-space-8);
+  text-align: center;
+  color: var(--sc-text-muted);
+}

@@ -1,0 +1,63 @@
+/*
+  SentraCore Design System v1.0 — Buttons
+  Usage: <button class="sc-btn sc-btn--primary">Save</button>
+  Sizes: add sc-btn--sm or sc-btn--lg (default is the base size).
+  Icon-only: sc-btn sc-btn--icon sc-btn--ghost, with an sc-sr-only label inside.
+*/
+
+.sc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sc-space-2);
+  font-family: var(--sc-font-sans);
+  font-size: var(--sc-text-button-size);
+  line-height: var(--sc-text-button-lh);
+  font-weight: var(--sc-text-button-weight);
+  padding: var(--sc-space-2) var(--sc-space-4);
+  border-radius: var(--sc-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color var(--sc-transition-fast), border-color var(--sc-transition-fast), color var(--sc-transition-fast);
+  white-space: nowrap;
+}
+.sc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sc-btn--sm { padding: var(--sc-space-1) var(--sc-space-3); font-size: var(--sc-text-small-size); }
+.sc-btn--lg { padding: var(--sc-space-3) var(--sc-space-6); font-size: var(--sc-text-body-lg-size); }
+
+/* Primary — main call to action */
+.sc-btn--primary {
+  background: var(--sc-primary);
+  color: #FFFFFF;
+}
+.sc-btn--primary:hover:not(:disabled) { background: var(--sc-primary-hover); }
+
+/* Secondary — outlined, for the second-most-important action on a screen */
+.sc-btn--secondary {
+  background: var(--sc-surface);
+  border-color: var(--sc-border);
+  color: var(--sc-text-primary);
+}
+.sc-btn--secondary:hover:not(:disabled) { border-color: var(--sc-primary); }
+
+/* Ghost — no border/fill until interacted with; toolbars, table row actions */
+.sc-btn--ghost {
+  background: transparent;
+  color: var(--sc-text-secondary);
+}
+.sc-btn--ghost:hover:not(:disabled) { background: var(--sc-surface); color: var(--sc-text-primary); }
+
+/* Danger — destructive actions (delete rule, stop agent, etc.) */
+.sc-btn--danger {
+  background: var(--sc-danger);
+  color: #FFFFFF;
+}
+.sc-btn--danger:hover:not(:disabled) { filter: brightness(1.1); }
+
+/* Icon button — square, for a single icon with an accessible name */
+.sc-btn--icon {
+  padding: var(--sc-space-2);
+  width: 36px;
+  height: 36px;
+}
+.sc-btn--icon.sc-btn--sm { width: 28px; height: 28px; padding: var(--sc-space-1); }

@@ -1,0 +1,12 @@
+{
+  "name": "sentracore-rmm-design-system",
+  "private": true,
+  "description": "Build tooling for the SentraCore design system (Tailwind compilation only - the server and agent have their own package.json for runtime deps)",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i server/public/ui/styles/tailwind.input.css -o server/public/ui/styles/tailwind.build.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i server/public/ui/styles/tailwind.input.css -o server/public/ui/styles/tailwind.build.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.10"
+  }
+}

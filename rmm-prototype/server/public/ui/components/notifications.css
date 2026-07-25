@@ -1,0 +1,62 @@
+/*
+  SentraCore Design System v1.0 — Notifications
+  Toasts are created/managed by ui/components/toast.js. Alert banners and
+  inline alerts are static markup - drop the class on any container.
+*/
+
+/* ---- Toast (transient, corner-anchored) ---- */
+.sc-toast-region {
+  position: fixed;
+  bottom: var(--sc-space-6);
+  right: var(--sc-space-6);
+  z-index: var(--sc-toast-z);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-2);
+  width: 320px;
+}
+.sc-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sc-space-2);
+  background: var(--sc-surface-elevated);
+  border: 1px solid var(--sc-border);
+  border-left: 3px solid var(--sc-info);
+  border-radius: var(--sc-radius-md);
+  padding: var(--sc-space-3);
+  box-shadow: var(--sc-shadow-lg);
+  font-size: var(--sc-text-small-size);
+  color: var(--sc-text-primary);
+  animation: sc-toast-in var(--sc-transition-slow) ease;
+}
+.sc-toast--success { border-left-color: var(--sc-success); }
+.sc-toast--warning { border-left-color: var(--sc-warning); }
+.sc-toast--danger { border-left-color: var(--sc-danger); }
+@keyframes sc-toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Alert banner (persistent, page/section-level) ---- */
+.sc-alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sc-space-2);
+  padding: var(--sc-space-3) var(--sc-space-4);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-md);
+  font-size: var(--sc-text-small-size);
+}
+.sc-alert-banner--info    { border-color: var(--sc-info); color: var(--sc-info); background: color-mix(in srgb, var(--sc-info) 8%, transparent); }
+.sc-alert-banner--warning { border-color: var(--sc-warning); color: var(--sc-warning); background: color-mix(in srgb, var(--sc-warning) 8%, transparent); }
+.sc-alert-banner--danger  { border-color: var(--sc-danger); color: var(--sc-danger); background: color-mix(in srgb, var(--sc-danger) 8%, transparent); }
+.sc-alert-banner--success { border-color: var(--sc-success); color: var(--sc-success); background: color-mix(in srgb, var(--sc-success) 8%, transparent); }
+
+/* ---- Inline alert (small, form-adjacent) ---- */
+.sc-inline-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  font-size: var(--sc-text-caption-size);
+  color: var(--sc-danger);
+}
