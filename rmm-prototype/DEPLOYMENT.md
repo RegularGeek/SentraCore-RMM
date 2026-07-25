@@ -59,7 +59,7 @@ sudo apt install -y nodejs npm build-essential   # build-essential for better-sq
 sudo useradd -r -m -d /opt/rmm-prototype rmm
 sudo git clone <your repo> /opt/rmm-prototype     # or scp it up
 cd /opt/rmm-prototype/server
-sudo -u rmm npm install
+sudo -u rmm npm ci --omit=dev
 
 sudo -u rmm bash -c "SEED_ADMIN_PASS='choose a real password' npm run seed"
 
@@ -93,9 +93,15 @@ machine's side.
 
 ## After you're live
 
-- There's still no "change password" UI — rotate a user's password by
-  re-running the relevant insert/update against the SQLite file directly,
-  or extend `services/authService.js` with a change-password endpoint.
+- Rotate the seeded password from the dashboard: **account** → *Change your
+  password*. Add the rest of your team under **account** → *Users* (admins
+  only) instead of touching SQLite by hand.
+- `SESSION_SECRET` is mandatory when `NODE_ENV=production` — the server exits
+  on startup without it. Sessions are stored in SQLite, so they survive
+  restarts and deploys.
+- Point your monitoring at `GET /healthz` (unauthenticated, no side effects).
+  The Docker Compose service already uses it as its container healthcheck:
+  `docker compose ps` will show the server as `healthy`.
 - Set up backups for the SQLite file: `/app/data/rmm.db` (Docker volume) or
   `/opt/rmm-prototype/server/rmm.db` (native). A daily `cp` to off-box
   storage is enough at this scale.

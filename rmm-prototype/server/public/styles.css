@@ -532,3 +532,92 @@ canvas.trace { display: block; width: 100%; height: 56px; }
 .script-cmd { background: var(--surface-raised); color: var(--text-dim); }
 .script-out { background: rgba(79, 209, 197, 0.06); color: var(--text); }
 .script-err { background: rgba(229, 103, 90, 0.06); color: var(--red); }
+
+/* ---- Utilities (kept as classes, not inline styles, so the CSP can stay
+   strict — see CSP_DIRECTIVES in server/app.js) ---- */
+.is-hidden { display: none !important; }
+.card-section-label { margin-bottom: 10px; }
+.card-block { margin-top: 16px; }
+
+.sidebar-toggle { display: none; }
+@media (max-width: 900px) {
+  .sidebar-toggle { display: inline-flex; }
+}
+
+/* ---- Login page ---- */
+.login-card {
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-4);
+}
+.login-brand { margin-bottom: var(--sc-space-2); gap: var(--sc-space-2); }
+.login-submit { margin-top: var(--sc-space-2); }
+.login-hint { text-transform: none; letter-spacing: normal; line-height: 1.6; }
+
+/* ---- Account drawer: password change + user management ---- */
+.stack-form { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.stack-form input, .stack-form select {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 5px;
+  padding: 7px 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.stack-form button {
+  background: var(--cyan);
+  border: none;
+  color: #0B1015;
+  font-weight: 700;
+  border-radius: 5px;
+  padding: 8px;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 12px;
+}
+.stack-form button:disabled { opacity: 0.6; cursor: default; }
+
+.form-message { font-size: 11px; min-height: 14px; color: var(--text-faint); }
+.form-message.ok { color: var(--cyan); }
+.form-message.error { color: var(--red); }
+
+.users-list { display: flex; flex-direction: column; gap: 8px; }
+.user-row {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.user-row.inactive { opacity: 0.55; }
+.user-row-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.user-name { font-family: var(--font-display); font-weight: 500; font-size: 13px; }
+.user-meta { color: var(--text-faint); font-size: 11px; margin-top: 2px; }
+.user-actions { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.user-actions select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.link-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+.link-btn:hover { border-color: var(--brand-blue); color: var(--text); }
+.link-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+.rule-row.disabled { opacity: 0.55; }
+.rule-row-actions { display: flex; gap: 6px; }
+.toast-dismiss { margin-left: auto; }

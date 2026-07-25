@@ -42,6 +42,7 @@ let ws;
 let reconnectDelay = 1000;
 const MAX_RECONNECT_DELAY = 30000;
 let metricsTimer = null;
+let stopping = false;
 
 async function staticInfo() {
   const [osInfo, cpu] = await Promise.all([si.osInfo(), si.cpu()]);
@@ -225,9 +226,10 @@ function connect() {
     }
   });
 
-  ws.on("close", (code, reason) => {
+  ws.on("close", (code) => {
     if (metricsTimer) clearInterval(metricsTimer);
     if (inventoryTimer) clearInterval(inventoryTimer);
+    if (stopping) return;
     console.log(`[agent] disconnected (${code}) reconnecting in ${reconnectDelay}ms...`);
     setTimeout(connect, reconnectDelay);
     reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
@@ -237,5 +239,17 @@ function connect() {
     console.error("[agent] socket error:", err.message);
   });
 }
+
+// Ctrl-C / systemd stop: close the socket so the server marks this endpoint
+// offline immediately instead of waiting for the heartbeat to time out.
+function shutdown(signal) {
+  stopping = true;
+  console.log(`[agent] ${signal} received, disconnecting`);
+  if (metricsTimer) clearInterval(metricsTimer);
+  if (ws && ws.readyState === WebSocket.OPEN) ws.close(1000, "agent shutting down");
+  setTimeout(() => process.exit(0), 500).unref();
+}
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 connect();

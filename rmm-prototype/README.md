@@ -1,4 +1,4 @@
-# SentraCore RMM — Beta (v0.3)
+# SentraCore RMM — Beta (v0.4)
 
 A working RMM stack covering the core pillars: **live monitoring**, **historical
 trending**, **asset inventory**, **threshold alerting**, and **audited remote
@@ -23,6 +23,7 @@ access control.
 | **Asset inventory** | Hardware summary (CPU, RAM modules, disks, GPU, network) + installed software list, collected on connect and every 30 min |
 | **Threshold alerting** | Per-org rules (metric, comparator, threshold) evaluated on every metrics update; fires a webhook (and email if SMTP is configured) and shows in an in-app alerts drawer with counts/badges |
 | **Remote script execution** | Run a script on any endpoint from the dashboard; every run — who, what, when, exit code, stdout/stderr — is logged and viewable per-agent. Gated to the `technician` role and above (see Authentication) |
+| **User management** | Admins manage their org's users from the dashboard (**account** → Users): create, change role, deactivate/reactivate, reset password. Every user can change their own password from the same drawer |
 
 ## Authentication
 
@@ -30,30 +31,38 @@ The server enforces session-cookie auth on every route, plus:
 
 - **Password hashing** — bcrypt (`bcryptjs`, 10 salt rounds), never plaintext, never logged.
 - **Role-based access control** — `users.role` is one of `readonly < technician < admin < superadmin`
-  (weakest to strongest). `requireRole(minRole)` middleware gates specific routes; today it's
-  applied to remote script execution (`technician`+), which was the single biggest risk flagged
-  in earlier versions of this README ("any logged-in user can run anything on any endpoint").
-  Extending it to other routes (deleting alert rules, managing agents) is straightforward — see
-  `server/middleware/requireRole.js`.
+  (weakest to strongest). `requireRole(minRole)` middleware gates mutating routes:
+  remote script execution and alert-rule create/ack/pause need `technician`+, alert-rule
+  deletion and all user management need `admin`+. Reads stay open to any signed-in user.
+- **Role/state changes take effect immediately** — every authenticated request re-reads the
+  user row, so a demotion or deactivation applies to live sessions (including the dashboard
+  WebSocket) without waiting for the cookie to expire.
+- **Role ceiling** — nobody can create a user, promote a user, or reset a password for a role
+  above their own, and the last active admin in an org can't be demoted or deactivated.
+- **Password policy** — minimum 10 characters, obvious passwords rejected (`server/auth/password.js`),
+  enforced on seeding, admin resets, and self-service changes alike.
 - **No default/hardcoded credentials** — `npm run seed` now *requires* `SEED_ADMIN_PASS` to be
   set and refuses to create an account otherwise. There is no `changeme123` fallback anymore.
 - **Secure session cookies** — `httpOnly`, `sameSite: lax`, and `secure` (HTTPS-only) when
-  `NODE_ENV=production`. Signed with `SESSION_SECRET`.
+  `NODE_ENV=production`. Signed with `SESSION_SECRET`, rolling expiry, and the session id is
+  regenerated on login (session-fixation protection).
+- **Persistent sessions** — sessions live in SQLite (`server/auth/sessionStore.js`), so a server
+  restart no longer signs everyone out; expired rows are pruned in the background.
 - **Login rate limiting** — a coarse per-IP throttle (`express-rate-limit`) plus a persisted,
   per-username+IP failed-attempt counter (`login_attempts` table) that survives restarts.
 - **CSRF protection** — double-submit cookie pattern (`server/middleware/csrf.js`) on every
   state-changing `/api/*` route. The dashboard client echoes the cookie back as an
   `x-csrf-token` header automatically.
-- **Security headers** — `helmet` is applied globally (CSP is intentionally left off for now —
-  see the comment in `server.js`; enabling it needs its own pass against the actual asset list).
+- **Security headers** — `helmet` is applied globally, including a Content-Security-Policy
+  allowlisting only what the dashboard actually loads (self, Google Fonts, unpkg for Lucide);
+  `object-src`/`frame-ancestors` are `'none'` and no inline styles or scripts are used.
 - **`last_login` tracking** — updated on every successful login, stored on the `users` row.
 - **Environment-variable secrets** — `SESSION_SECRET`, `SEED_ADMIN_PASS`, etc. are never
   committed; see `deploy/.env.example`.
 
-**What's still a known gap (see Roadmap):** there's no "create additional user" UI yet — new
-users are currently added via `seed.js` or directly in SQLite. There's also no
-approval/second-signoff step before a script runs, even for `admin`/`superadmin` — role gating
-narrows *who* can run scripts, it doesn't add a review step for *what* gets run.
+**What's still a known gap (see Roadmap):** there's no approval/second-signoff step before a
+script runs, even for `admin`/`superadmin` — role gating narrows *who* can run scripts, it
+doesn't add a review step for *what* gets run. Multi-org management still has no UI.
 
 ### Folder structure
 
@@ -61,14 +70,19 @@ Authentication-related code was split out of the single `server.js` file it used
 
 ```
 server/
-  auth/            session config, password hashing
+  auth/             session config, SQLite session store, password hashing + policy
   middleware/       requireAuth, requireRole (RBAC), csrf, loginRateLimit
-  database/         db.js (schema + queries) — was server/db.js
-  routes/           authRoutes, agentRoutes, alertRoutes, scriptRoutes
-  services/         authService (login flow), notify (webhook/email) — was server/notify.js
+  database/         db.js (schema + queries)
+  routes/           authRoutes, agentRoutes, alertRoutes, scriptRoutes, userRoutes
+  services/         authService (login/password flows), notify (webhook/email)
   models/           User.js (thin wrapper over the users queries)
-  server.js         wiring only: express/session/ws setup, WS message handling, alert evaluation
+  test/             node:test + supertest suites (auth, users, alerts, RBAC, session store)
+  app.js            the Express app: middleware, CSP, /healthz, route mounting
+  server.js         HTTP + WebSocket wiring, WS message handling, alert evaluation, shutdown
 ```
+
+Splitting the Express app out of `server.js` is what makes the HTTP layer testable without
+binding a port: the tests call `createApp()` directly.
 
 Route paths, WebSocket message shapes, and the SQLite schema are unchanged from v0.2 — the
 dashboard and agent don't need any changes to keep working. Old-format `users` rows (created
@@ -99,16 +113,39 @@ live metrics, then explore the **History**, **Inventory**, and **Scripts** tabs.
 
 **4. Set up an alert** — click **alerts** in the top bar → add a rule (e.g.
 `CPU load > 90`) → it fires the next time any matching endpoint breaches it,
-shown in the drawer and (if you set a webhook URL) POSTed as JSON.
+shown in the drawer and (if you set a webhook URL) POSTed as JSON. Rules can be
+paused instead of deleted.
+
+**5. Add your team** — click **account** in the top bar to change your own
+password, and (as `admin`+) to create users, set roles, reset passwords, or
+deactivate accounts.
 
 Run multiple agents to populate the dashboard with several endpoints.
+
+### Tests and linting
+
+```bash
+cd server
+npm test     # node:test + supertest, runs against a throwaway SQLite file
+npm run lint # eslint (server + browser code)
+```
+
+Both run in CI on every pull request (`.github/workflows/ci.yml`).
+
+### Health check
+
+`GET /healthz` is unauthenticated and returns `{ "status": "ok", "uptimeSec": n }` —
+wire it into your load balancer, `docker-compose` healthcheck (already configured),
+or uptime monitor.
 
 ## Configuration
 
 | Variable | Where | Default | Purpose |
 |---|---|---|---|
 | `PORT` | server | `8787` | HTTP/WS port |
-| `SESSION_SECRET` | server | `dev-secret-change-me` | Signs session cookies — **change this**, especially in production |
+| `SESSION_SECRET` | server | `dev-secret-change-me` | Signs session cookies — **change this**; the server refuses to start in production without it |
+| `DB_PATH` | server | `./rmm.db` | SQLite file location |
+| `SESSION_TTL_MS` | server | `43200000` (12 h) | Idle lifetime of a session before re-login |
 | `SEED_ADMIN_USER` | server (seed) | `admin` | Initial login username |
 | `SEED_ADMIN_EMAIL` | server (seed) | `<user>@local` | Initial login email |
 | `SEED_ADMIN_PASS` | server (seed) | *(none — required)* | Initial login password. `seed.js` exits with an error if this isn't set |
@@ -133,7 +170,10 @@ Run multiple agents to populate the dashboard with several endpoints.
 3. Prints the login and agent token to stdout — nothing is written to disk
    in plaintext beyond the SQLite file itself.
 
-There is no "change password" UI yet — see Roadmap.
+After the first login, everything else happens in the UI: rotate the seeded
+password under **account** → *Change your password*, and add the rest of your
+team under **account** → *Users*. `SEED_ADMIN_PASS` must satisfy the same
+password policy as the UI.
 
 ## Hosting it somewhere real
 
@@ -157,17 +197,16 @@ client's network unmonitored. At minimum, before doing that:
   with what result), but there's still no approval/second-signoff step —
   don't hand out `technician`+ roles to anyone you wouldn't trust with shell
   access to every endpoint in the org.
-- **Swap the session store.** `express-session`'s default `MemoryStore` is
-  fine for one process but loses all sessions on restart and won't work
-  if you ever run more than one server instance — move to Redis or similar.
+- **Plan for horizontal scale.** Sessions are persisted in SQLite, which
+  survives restarts and is fine for a single server. Running multiple
+  instances behind a load balancer still needs a shared store (Redis) and a
+  shared database.
 - **Only deploy agents to systems you're authorized to monitor and manage**,
   with the owner's knowledge, same as any commercial RMM tool's license
   terms require.
 
 ## Roadmap (not built yet)
 
-- **User management UI** — invite/create/deactivate users and assign roles
-  from the dashboard, instead of via `seed.js`/SQLite directly
 - **Approval step for scripts** — optional second-approval before a script
   runs, independent of role
 - **True multi-org UI** — org creation/switching, per-org signup, so one
@@ -177,5 +216,5 @@ client's network unmonitored. At minimum, before doing that:
   instead of running `npm start` in a terminal
 - **Ticketing** — alerts auto-open tickets, track resolution
 - **Remote desktop/screen control** — a much larger subsystem on its own
-- **Strict CSP** — helmet's default CSP is currently disabled; needs an
-  audit of the dashboard's actual script/style/font sources first
+- **Self-hosted fonts/icons** — would let the CSP drop the `unpkg.com` and
+  Google Fonts allowances entirely

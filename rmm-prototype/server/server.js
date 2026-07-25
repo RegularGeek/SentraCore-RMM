@@ -1,54 +1,24 @@
 // SentraCore RMM - Central Server
-// Restructured from the original single-file server.js into
-// auth/ middleware/ database/ routes/ services/ models/ per the
-// feature/authentication milestone. No route paths, WS message shapes,
-// or DB schemas were broken - see README "Authentication" section for
-// what changed and why.
+// HTTP app lives in app.js; this file owns the WebSocket layer (agents +
+// dashboards), alert evaluation, and process lifecycle.
 
-const express = require("express");
 const http = require("http");
-const path = require("path");
-const helmet = require("helmet");
-const cookieParser = require("cookie-parser");
 const { WebSocketServer } = require("ws");
 
 const db = require("./database/db");
+const { createApp } = require("./app");
 const { sessionParser } = require("./auth/session");
-const { requireLogin } = require("./middleware/requireAuth");
-const { issueCsrfCookie, verifyCsrfToken } = require("./middleware/csrf");
 const { notifyAlert } = require("./services/notify");
-
-const authRoutes = require("./routes/authRoutes");
-const createAgentRoutes = require("./routes/agentRoutes");
-const alertRoutes = require("./routes/alertRoutes");
-const { createScriptRoutes } = require("./routes/scriptRoutes");
 
 const PORT = process.env.PORT || 8787;
 
-const app = express();
-app.set("trust proxy", 1); // needed for req.ip to be correct behind Caddy - see DEPLOYMENT.md
+// ---- Live in-memory state (fast path; DB is the source of truth for history) ----
+const liveAgents = new Map(); // agentId -> { ws, orgId, hostname, lastMetrics, status }
 
-app.use(
-  helmet({
-    // Keep CSP disabled for now - the dashboard loads Google Fonts and
-    // inline event handlers are not used, but a strict CSP needs its own
-    // pass with the actual asset list to avoid breaking the UI silently.
-    // Tracked as follow-up work, not shipped half-configured.
-    contentSecurityPolicy: false,
-  })
-);
-app.use(express.json());
-app.use(cookieParser());
-app.use(sessionParser);
-app.use(issueCsrfCookie);
-app.use(express.static(path.join(__dirname, "public"), { index: false }));
-
+const app = createApp({ liveAgents });
 const server = http.createServer(app);
 const wssAgents = new WebSocketServer({ noServer: true });
 const wssDashboards = new WebSocketServer({ noServer: true });
-
-// ---- Live in-memory state (fast path; DB is the source of truth for history) ----
-const liveAgents = new Map(); // agentId -> { ws, orgId, hostname, lastMetrics, status }
 
 function dashboardsForOrg(orgId) {
   return [...wssDashboards.clients].filter((c) => c.readyState === c.OPEN && c.orgId === orgId);
@@ -59,23 +29,7 @@ function broadcastToOrg(orgId, msg) {
 }
 
 // =====================================================================
-// Routes
-// =====================================================================
-// Auth routes are exempt from the CSRF check (there's no session yet to
-// tie a token to at login time) but everything past this point that
-// mutates state requires both a session (requireLogin) and a matching
-// CSRF token (verifyCsrfToken).
-app.use("/api", authRoutes);
-
-app.get("/", requireLogin, (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-
-app.use("/api", requireLogin, verifyCsrfToken);
-app.use("/api", createAgentRoutes({ liveAgents }));
-app.use("/api", alertRoutes);
-app.use("/api", createScriptRoutes({ liveAgents }));
-
-// =====================================================================
-// Alert evaluation (unchanged behavior, just relocated)
+// Alert evaluation
 // =====================================================================
 function evaluateAlerts(orgId, agentId, hostname, data) {
   const rules = db.getRulesByOrg(orgId).filter((r) => r.enabled);
@@ -122,6 +76,14 @@ server.on("upgrade", (req, socket, head) => {
         socket.destroy();
         return;
       }
+      // Re-check the account on upgrade: a deactivated user's live cookie
+      // shouldn't buy them a metrics stream after the HTTP API cuts them off.
+      const user = db.getUserById(req.session.userId);
+      if (!user || user.active === 0) {
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        socket.destroy();
+        return;
+      }
       wssDashboards.handleUpgrade(req, socket, head, (ws) => {
         ws.orgId = req.session.orgId;
         wssDashboards.emit("connection", ws, req);
@@ -138,6 +100,9 @@ wssAgents.on("connection", (ws) => {
   let agentId = null;
   let orgId = null;
 
+  ws.isAlive = true;
+  ws.on("pong", () => { ws.isAlive = true; });
+
   ws.on("message", (raw) => {
     let msg;
     try { msg = JSON.parse(raw.toString()); } catch { return; }
@@ -145,6 +110,7 @@ wssAgents.on("connection", (ws) => {
     if (msg.type === "register") {
       const org = db.getOrgByToken(msg.token || "");
       if (!org) { ws.close(4001, "invalid token"); return; }
+      if (typeof msg.agentId !== "string" || !msg.agentId) { ws.close(4002, "missing agentId"); return; }
       agentId = msg.agentId;
       orgId = org.id;
       const info = msg.info || {};
@@ -177,6 +143,10 @@ wssAgents.on("connection", (ws) => {
     }
 
     if (msg.type === "script_result") {
+      // Only the agent the run was dispatched to may report its result -
+      // otherwise any registered agent could overwrite another's audit row.
+      const run = db.getScriptRun(msg.runId);
+      if (!run || run.agent_id !== agentId) return;
       db.completeScriptRun(msg.runId, {
         exit_code: msg.exitCode,
         stdout: (msg.stdout || "").slice(0, 100000),
@@ -201,7 +171,7 @@ wssAgents.on("connection", (ws) => {
 });
 
 // ---- Dashboard connections ----
-wssDashboards.on("connection", (ws, req) => {
+wssDashboards.on("connection", (ws) => {
   const orgId = ws.orgId;
   const agents = db.getAgentsByOrg(orgId).map((a) => ({
     id: a.id, info: { hostname: a.hostname, platform: a.platform, distro: a.distro, cpuModel: a.cpu_model, cores: a.cores },
@@ -211,9 +181,16 @@ wssDashboards.on("connection", (ws, req) => {
   ws.send(JSON.stringify({ type: "snapshot", agents }));
 });
 
-// Mark agents offline if we haven't heard from them in a while.
-const STALE_MS = 15000;
-setInterval(() => {
+// Heartbeat: a half-open agent socket (laptop lid closed, NAT timeout) never
+// fires 'close', so ping and drop the ones that stop answering.
+const HEARTBEAT_MS = 15000;
+const heartbeat = setInterval(() => {
+  for (const ws of wssAgents.clients) {
+    if (ws.isAlive === false) { ws.terminate(); continue; }
+    ws.isAlive = false;
+    ws.ping();
+  }
+
   for (const [id, live] of liveAgents.entries()) {
     if (live.status === "online" && (!live.ws || live.ws.readyState !== live.ws.OPEN)) {
       live.status = "offline";
@@ -221,10 +198,25 @@ setInterval(() => {
       broadcastToOrg(live.orgId, { type: "agent_offline", id });
     }
   }
-}, 5000);
+}, HEARTBEAT_MS);
 
 // Prune metrics older than 30 days so the DB doesn't grow forever.
-setInterval(() => db.pruneHistory(Date.now() - 30 * 86400e3), 6 * 3600e3);
+const pruneTimer = setInterval(() => db.pruneHistory(Date.now() - 30 * 86400e3), 6 * 3600e3);
+
+function shutdown(signal) {
+  console.log(`\n[server] ${signal} received, shutting down`);
+  clearInterval(heartbeat);
+  clearInterval(pruneTimer);
+  for (const ws of [...wssAgents.clients, ...wssDashboards.clients]) ws.close(1001, "server shutting down");
+  server.close(() => {
+    db.close();
+    process.exit(0);
+  });
+  // Don't hang forever on a stuck connection.
+  setTimeout(() => process.exit(1), 5000).unref();
+}
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 server.listen(PORT, () => {
   console.log(`SentraCore RMM server listening on http://localhost:${PORT}`);
@@ -233,3 +225,5 @@ server.listen(PORT, () => {
   console.log(`  Dashboard WS: ws://localhost:${PORT}/ws/dashboard`);
   console.log(`If this is your first run: npm run seed  (creates an org, admin login, and agent token)`);
 });
+
+module.exports = { server, app, liveAgents, evaluateAlerts };

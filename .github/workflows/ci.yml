@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  server:
+    name: Server (lint + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rmm-prototype/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run lint
+      - run: npm test
+
+  agent:
+    name: Agent (syntax check)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rmm-prototype/agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: node --check agent.js
